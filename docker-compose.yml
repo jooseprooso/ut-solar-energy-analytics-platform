@@ -1,0 +1,15 @@
+services:
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DBT_PROFILES_DIR: /app/dbt
+    working_dir: /app
+    volumes:
+      - .:/app
+    stdin_open: true
+    tty: true

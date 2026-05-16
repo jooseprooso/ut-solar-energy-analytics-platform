@@ -24,12 +24,14 @@ tapselt on voimalik prognoosida jargmise paeva paikeseenergia tootmist?
 
 ```text
 ├─ .github/workflows/
+├─ Dockerfile
 ├─ dbt/
 │  ├─ models/
 │  │  ├─ silver/
 │  │  └─ gold/
 │  ├─ dbt_project.yml
 │  └─ profiles.yml
+├─ docker-compose.yml
 ├─ docs/
 ├─ sql/
 ├─ src/
@@ -41,11 +43,12 @@ tapselt on voimalik prognoosida jargmise paeva paikeseenergia tootmist?
 
 ## Kohalikus masinas käivitamine
 
-1. Loo virtuaalkeskkond:
-   - `python3 -m venv .venv`
-   - `source .venv/bin/activate`
-2. Paigalda sõltuvused:
-   - `pip install -r requirements.txt`
-3. Loo `.env` fail `.env.example` põhjal.
-4. Kontrolli dbt paigaldust:
-   - `dbt --version`
+1. Loo `.env` fail `.env.example` põhjal.
+2. Ehita konteiner:
+   - `docker compose build`
+3. Kontrolli dbt paigaldust konteineris:
+   - `docker compose run --rm dev dbt --version`
+4. Kontrolli ühendust Supabase'iga:
+   - `docker compose run --rm dev dbt debug`
+5. Kaivita Python skript konteineris (naide):
+   - `docker compose run --rm dev python --version`
