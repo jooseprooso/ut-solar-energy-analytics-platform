@@ -1,0 +1,13 @@
+solar_analytics:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: "{{ env_var('SUPABASE_DB_HOST') }}"
+      port: "{{ env_var('SUPABASE_DB_PORT') | int }}"
+      user: "{{ env_var('SUPABASE_DB_USER') }}"
+      pass: "{{ env_var('SUPABASE_DB_PASSWORD') }}"
+      dbname: "{{ env_var('SUPABASE_DB_NAME') }}"
+      schema: silver
+      threads: 4
+      sslmode: require
