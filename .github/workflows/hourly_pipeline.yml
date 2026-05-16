@@ -14,7 +14,7 @@ jobs:
       SUPABASE_DB_NAME: ${{ secrets.SUPABASE_DB_NAME }}
       SUPABASE_DB_USER: ${{ secrets.SUPABASE_DB_USER }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-      DBT_PROFILES_DIR: .
+      DBT_PROFILES_DIR: ${{ github.workspace }}/dbt
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,9 +31,7 @@ jobs:
         run: dbt --version
 
       - name: dbt deps
-        working-directory: dbt
-        run: dbt deps
+        run: dbt deps --project-dir dbt --profiles-dir "${DBT_PROFILES_DIR}"
 
       - name: dbt debug
-        working-directory: dbt
-        run: dbt debug
+        run: dbt debug --project-dir dbt --profiles-dir "${DBT_PROFILES_DIR}"
