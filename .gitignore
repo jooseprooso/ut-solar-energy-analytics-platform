@@ -7,3 +7,5 @@ dbt/target/
 dbt/dbt_packages/
 dbt/.user.yml
 logs/
+airflow/logs/*
+!airflow/logs/.gitkeep

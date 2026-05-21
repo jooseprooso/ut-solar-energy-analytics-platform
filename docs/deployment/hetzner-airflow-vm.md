@@ -1,0 +1,77 @@
+# Hetzner VM Deployment for Airflow 3
+
+This guide provisions a central VM for Airflow 3 and dbt orchestration.
+
+## Recommended VM
+
+- Provider: Hetzner Cloud (Cost-Optimized or shared cloud)
+- Recommended size: 4 vCPU, 8 GB RAM, 80 GB SSD
+- Minimum size: 2 vCPU, 4 GB RAM, 40 GB SSD
+- OS: Ubuntu 24.04 LTS
+
+## 1) Initial VM setup
+
+On your local machine:
+
+```bash
+ssh root@<VM_IP>
+```
+
+On VM:
+
+```bash
+apt-get update -y
+apt-get install -y git
+git clone https://github.com/jooseprooso/ut-solar-energy-analytics-platform.git
+cd ut-solar-energy-analytics-platform
+bash scripts/deploy/hetzner_bootstrap.sh
+```
+
+Re-login after bootstrap to refresh Docker group membership.
+
+## 2) Environment configuration
+
+```bash
+cd ut-solar-energy-analytics-platform
+cp .env.example .env
+```
+
+Fill required secrets:
+- Supabase connection settings
+- VRM and Open-Meteo credentials/config
+- Airflow admin values:
+  - `AIRFLOW_ADMIN_USER`
+  - `AIRFLOW_ADMIN_PASSWORD`
+  - `AIRFLOW_ADMIN_EMAIL`
+
+## 3) Start Airflow stack
+
+```bash
+docker compose -f airflow/docker-compose.airflow.yml up airflow-init
+docker compose -f airflow/docker-compose.airflow.yml up -d
+```
+
+Airflow UI:
+
+- `http://<VM_IP>:8080`
+
+## 4) Verify scheduler health
+
+```bash
+docker compose -f airflow/docker-compose.airflow.yml ps
+docker compose -f airflow/docker-compose.airflow.yml logs airflow-scheduler --tail=100
+```
+
+## 5) Load and run the main DAG
+
+- Open Airflow UI
+- Confirm DAG `solar_pipeline_main` is present
+- Trigger manual run once
+- Verify task logs and Supabase outputs
+
+## 6) Security hardening
+
+- Restrict port `8080` to team IPs if possible.
+- Use strong admin password.
+- Keep `.env` only on server and local machines (never commit).
+- Consider reverse proxy + TLS if exposed publicly.

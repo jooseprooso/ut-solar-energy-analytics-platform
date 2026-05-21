@@ -2,8 +2,6 @@ name: daily_db_check
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 6 * * *"
 
 jobs:
   db_connection_check:

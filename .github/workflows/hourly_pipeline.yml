@@ -2,8 +2,6 @@ name: hourly_pipeline
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 * * * *"
 
 jobs:
   infra_healthcheck:
