@@ -21,7 +21,9 @@ Serveri `.env` peab sisaldama vähemalt:
 - `AIRFLOW_ADMIN_USER`
 - `AIRFLOW_ADMIN_PASSWORD`
 - `AIRFLOW_ADMIN_EMAIL`
+- `AIRFLOW__CORE__AUTH_MANAGER=airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager`
 - `AIRFLOW__API__SECRET_KEY` (sama väärtus kõigis Airflow teenustes)
+- `AIRFLOW__API_AUTH__JWT_SECRET` (API JWT allkirjastamine)
 
 Märkused:
 
@@ -62,6 +64,13 @@ docker compose --env-file .env -f airflow/docker-compose.airflow.yml exec airflo
 4. DAG run läbib dbt sõltuvuste sammu:
 - Triggeri `solar_pipeline_main` run ja kinnita, et `dbt_deps` on `success`.
 
+5. Airflow API auth sätted on rakendunud:
+
+```bash
+docker compose --env-file .env -f airflow/docker-compose.airflow.yml exec airflow-apiserver airflow config get-value core auth_manager
+docker compose --env-file .env -f airflow/docker-compose.airflow.yml exec airflow-apiserver airflow config get-value api_auth jwt_secret
+```
+
 ## dbt failiõiguste guardrail
 
 Kuna konteinerid jooksevad UID `50000` all, peab mountitud `dbt/` kaust olema kirjutatav:
@@ -81,6 +90,7 @@ docker compose --env-file .env -f airflow/docker-compose.airflow.yml exec airflo
 ## Minimaalne turvabaas
 
 - Hoia Airflow UI piiratud võrgus (IP allowlist või VPN).
+- Soovituslik: Airflow ligipääs ainult Tailscale võrgu kaudu.
 - Kasuta avaliku endpointi puhul HTTPS reverse proxy taga.
 - Hoia `Admin` roll ainult hooldajatel; inseneridele `Op`/`User`.
 - Vaheta default admin parool kohe pärast esmast deployd.
