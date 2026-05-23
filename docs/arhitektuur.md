@@ -17,14 +17,17 @@ flowchart LR
     vrmApi[Victron VRM API] --> ingestLayer[Python ingest]
     meteoApi[Open-Meteo API] --> ingestLayer
     ingestLayer --> bronze[(Supabase bronze)]
-    bronze --> silver[dbt silver mudelid]
-    silver --> gold[dbt gold mudelid]
+    bronze --> dbtSilver[dbt silver mudelid]
+    dbtSilver --> silver[(Supabase silver)]
+    silver --> dbtGold[dbt gold mudelid]
+    dbtGold --> gold[(Supabase gold)]
     gold --> grafana[Grafana näidikulaud]
     gold --> forecastJob[Python prognoositöö]
     forecastJob --> forecastTable[(Gold prognoositabel)]
     forecastTable --> grafana
     airflow[Airflow 3 Hetzner VM-is] --> ingestLayer
-    airflow --> silver
+    airflow --> dbtSilver
+    airflow --> dbtGold
     airflow --> forecastJob
     gha["GitHub Actions (CI/manual kontroll)"] --> ciChecks["Lint ja testid"]
 ```
