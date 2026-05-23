@@ -26,7 +26,7 @@ flowchart LR
     airflow[Airflow 3 Hetzner VM-is] --> ingestLayer
     airflow --> silver
     airflow --> forecastJob
-    gha[GitHub Actions (CI/manual kontroll)] --> ciChecks[Lint ja testid]
+    gha["GitHub Actions (CI/manual kontroll)"] --> ciChecks["Lint ja testid"]
 ```
 
 Täpsem kirjeldus: see dokument
