@@ -224,6 +224,6 @@ Kaustade eesmärk lühidalt:
 
 | Nimi | Roll |
 |------|------|
-| Joose Rooso | Infra, prognoos, näidikulaud |
+| Joosep Rooso | Infra, prognoos, näidikulaud |
 | Triinu Lepp | VRM API valmendus, transformatsioon, testid |
 | Olena Nedozhogina | Meteo API valmendus, transformatsioon, testid |
