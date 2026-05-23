@@ -114,6 +114,11 @@ Testide tulemused: [kuhu salvestatakse / kuidas vaadata]
 │   └── progress.md         ← nädal 2 väljund
 └── ...                     ← ülejäänud projektifailid
 ```
+## Riskid
+
+1. Väliste API-de ajutised tõrked või limiidid mõjutavad ingest-i stabiilsust.
+2. Vale või puudulik konfiguratsioon (.env, saladused) katkestab DAG-jooksud.
+3. Piiratud VM ressursid (2 vCPU/4 GB) võivad tekitada koormuspiike ja viivitusi.
 
 ## Kokkuvõte, puudused ja võimalikud edasiarendused
 
