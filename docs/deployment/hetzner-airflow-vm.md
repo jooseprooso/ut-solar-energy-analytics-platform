@@ -65,7 +65,7 @@ docker compose -f airflow/docker-compose.airflow.yml logs airflow-scheduler --ta
 ## 5) Load and run the main DAG
 
 - Open Airflow UI
-- Confirm DAG `solar_pipeline_main` is present
+- Confirm DAG `pipeline_smoke_test` is present
 - Trigger manual run once
 - Verify task logs and Supabase outputs
 

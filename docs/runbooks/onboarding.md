@@ -59,7 +59,7 @@ docker compose --env-file .env -f airflow/docker-compose.airflow.yml exec airflo
 Iga insener kinnitab:
 
 1. Saab Airflow UI-sse sisse logida.
-2. Näeb DAG-i `solar_pipeline_main`.
+2. Näeb DAG-i `pipeline_smoke_test`.
 3. Saab teha manual triggeri.
 4. Näeb task logisid `validate_runtime_config`, `dbt_deps` ja `dbt_run`.
 5. Kinnitab, et run jõuab `success` olekusse.

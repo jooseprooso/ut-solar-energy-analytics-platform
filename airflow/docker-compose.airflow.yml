@@ -36,13 +36,22 @@ services:
       - -c
       - |
         airflow db migrate && \
-        airflow users create \
-          --username "$${AIRFLOW_ADMIN_USER:-admin}" \
-          --password "$${AIRFLOW_ADMIN_PASSWORD:-admin}" \
-          --firstname Airflow \
-          --lastname Admin \
-          --role Admin \
-          --email "$${AIRFLOW_ADMIN_EMAIL:-admin@example.com}"
+        ADMIN_USER="$${AIRFLOW_ADMIN_USER:-admin}" && \
+        ADMIN_PASSWORD="$${AIRFLOW_ADMIN_PASSWORD:-admin}" && \
+        ADMIN_EMAIL="$${AIRFLOW_ADMIN_EMAIL:-admin@example.com}" && \
+        if airflow users list | awk 'NR>2 {print $2}' | grep -qx "$${ADMIN_USER}"; then \
+          airflow users reset-password \
+            --username "$${ADMIN_USER}" \
+            --password "$${ADMIN_PASSWORD}"; \
+        else \
+          airflow users create \
+            --username "$${ADMIN_USER}" \
+            --password "$${ADMIN_PASSWORD}" \
+            --firstname Airflow \
+            --lastname Admin \
+            --role Admin \
+            --email "$${ADMIN_EMAIL}"; \
+        fi
     volumes:
       - ../airflow/dags:/opt/airflow/dags
       - ../airflow/logs:/opt/airflow/logs

@@ -33,7 +33,7 @@ docker compose -f airflow/docker-compose.airflow.yml up -d
 
 ### DAG not visible in Airflow UI
 
-1. Check DAG file exists at `airflow/dags/solar_pipeline_main.py`.
+1. Check DAG file exists at `airflow/dags/solar_pipeline_main.py` and DAG id is `pipeline_smoke_test`.
 2. Check scheduler logs for parse errors.
 3. Restart scheduler and dag-processor.
 

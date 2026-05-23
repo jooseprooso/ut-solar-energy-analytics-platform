@@ -29,7 +29,7 @@ default_args = {
 
 
 with DAG(
-    dag_id="solar_pipeline_main",
+    dag_id="pipeline_smoke_test",
     description="Main Airflow orchestrator for ingestion, dbt, and forecasting",
     start_date=datetime(2026, 1, 1),
     schedule="@hourly",

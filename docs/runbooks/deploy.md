@@ -62,7 +62,7 @@ docker compose --env-file .env -f airflow/docker-compose.airflow.yml exec airflo
 ```
 
 4. DAG run läbib dbt sõltuvuste sammu:
-- Triggeri `solar_pipeline_main` run ja kinnita, et `dbt_deps` on `success`.
+- Triggeri `pipeline_smoke_test` run ja kinnita, et `dbt_deps` on `success`.
 
 5. Airflow API auth sätted on rakendunud:
 

@@ -7,7 +7,7 @@ def test_solar_pipeline_dag_contract() -> None:
 
     source = dag_file.read_text(encoding="utf-8")
 
-    assert 'dag_id="solar_pipeline_main"' in source
+    assert 'dag_id="pipeline_smoke_test"' in source
     assert 'schedule="@hourly"' in source
 
     for task_id in [
