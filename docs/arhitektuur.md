@@ -6,19 +6,27 @@ Kuidas mõjutavad ilmastikutingimused off-grid paigaldise energiatootmist ning k
 täpselt on võimalik prognoosida järgmise päeva päikeseenergia tootmist?
 
 **Mõõdikud:**
-1. [Esimene KPI või mõõdik — näiteks: päevane müük poe kohta]
-2. [Teine KPI või mõõdik]
-3. [Kolmas KPI või mõõdik — vabatahtlik]
+1. Järgmise päeva tootmise prognoosiviga (MAE, kWh).
+2. Tegeliku ja prognoositud päevase tootmise erinevus (kWh).
+3. Tegeliku ja prognoositud päevase tootmise erinevus (%).
 
 ## Arhitektuur
 
 ```mermaid
 flowchart LR
-    source[Andmeallikas] --> ingest[Sissevõtt]
-    ingest --> staging[(staging)]
-    staging --> transform[Transformatsioon]
-    transform --> mart[(mart)]
-    mart --> dashboard[Näidikulaud]
+    vrmApi[Victron VRM API] --> ingestLayer[Python ingest]
+    meteoApi[Open-Meteo API] --> ingestLayer
+    ingestLayer --> bronze[(Supabase bronze)]
+    bronze --> silver[dbt silver mudelid]
+    silver --> gold[dbt gold mudelid]
+    gold --> grafana[Grafana näidikulaud]
+    gold --> forecastJob[Python prognoositöö]
+    forecastJob --> forecastTable[(Gold prognoositabel)]
+    forecastTable --> grafana
+    airflow[Airflow 3 Hetzner VM-is] --> ingestLayer
+    airflow --> silver
+    airflow --> forecastJob
+    gha[GitHub Actions ainult CI] --> silver
 ```
 
 Täpsem kirjeldus: see dokument
@@ -27,18 +35,19 @@ Täpsem kirjeldus: see dokument
 
 | Allikas | Tüüp | Ajas muutuv? | Roll |
 |---------|------|-------------|------|
-| [Andmeallika nimi] | [API / fail / andmebaas] | Jah, [iga tund / päevas / muu] | Põhiandmevoog |
-| [Teise allika nimi] | [seed / dim-tabel] | Ei, staatiline | Kõrvaltabel |
+| VRM API | API | Jah, iga 15 min tagant | Põhiandmevoog |
+| Open Meteo | API | Jah, ilmamudel uueneb iga 6h tagant | Kõrvalvoog |
 
 ## Stack
 
 | Komponent | Tööriist |
 |-----------|---------|
-| Sissevõtt | [Python / Airflow / muu] |
-| Transformatsioon | [SQL / dbt / muu] |
+| Sissevõtt | Airflow, Python |
+| Transformatsioon | SQL, dbt |
 | Andmehoidla | PostgreSQL |
-| Näidikulaud | [Superset / Streamlit / muu] |
-| Orkestreerimine | [Airflow / cron / muu] |
+| Prognoos | Python |
+| Näidikulaud | Grafana |
+| Orkestreerimine | Airflow |
 
 ## Käivitamine
 
@@ -121,7 +130,6 @@ Testide tulemused: [kuhu salvestatakse / kuidas vaadata]
 
 | Nimi | Roll |
 |------|------|
-| [Nimi 1] | [Roll] |
-| [Nimi 2] | [Roll] |
-| [Nimi 3] | [Roll] |
-| [Nimi 4] | [Roll — vabatahtlik] |
+| Joose Rooso | Infra, prognoos, näidikulaud |
+| Triinu Lepp | VRM API valmendus, transformatsioon, testid |
+| Olena Nedozhogina | Meteo API valmendus, transformatsioon, testid |
