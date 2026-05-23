@@ -52,35 +52,88 @@ Täpsem kirjeldus: see dokument
 
 ## Käivitamine
 
+### Kohalik arendus (`docker-compose.yml`)
+
 ```bash
-# 1. Klooni repo ja liigu kausta
-git clone <repo-url>
-cd <projekti-kaust>
-
-# 2. Kopeeri keskkonnamuutujad
+# 1. Kopeeri keskkonnamuutujad
 cp .env.example .env
-# Muuda .env failis paroolid ja muud seaded vastavalt vajadusele
+# Täida .env failis vajalikud väärtused
 
-# 3. Käivita teenused
-docker compose up -d --build
+# 2. Ehita arenduskonteiner
+docker compose build
 
-# 4. [Vabatahtlik: käivita sissevõtt käsitsi esimesel korral]
-# docker compose exec pipeline python scripts/run_pipeline.py run-all
+# 3. Kontrolli dbt paigaldust ja ühendust
+docker compose run --rm dev dbt --version
+docker compose run --rm dev dbt debug
+
+# 4. Vajadusel käivita Python käsud
+docker compose run --rm dev python --version
 ```
 
-Airflow (kui kasutatakse): http://localhost:8080 (kasutaja: airflow / parool: airflow)
-Näidikulaud: http://localhost:[PORT]
+### Airflow 3 stack (`airflow/docker-compose.airflow.yml`)
+
+Teenused:
+- `airflow-postgres` (metadata andmebaas)
+- `airflow-init` 
+- `airflow-apiserver`
+- `airflow-scheduler`
+- `airflow-dag-processor`
+
+Käivitusjärjekord:
+1. `airflow-postgres` peab olema püsti.
+2. `airflow-init` peab lõppema edukalt.
+3. Seejärel käivituvad `airflow-apiserver`, `airflow-scheduler`, `airflow-dag-processor`.
+
+Käivita:
+1. `docker compose --env-file .env -f airflow/docker-compose.airflow.yml build`
+2. `docker compose --env-file .env -f airflow/docker-compose.airflow.yml up -d airflow-init`
+3. `docker compose --env-file .env -f airflow/docker-compose.airflow.yml up -d`
+
+Airflow UI:
+- Port on seotud localhostile (`127.0.0.1:8080`), seega ava `http://localhost:8080`.
+
+Connections/Variables bootstrap:
+- `docker compose --env-file .env -f airflow/docker-compose.airflow.yml run --rm airflow-apiserver bash /opt/airflow/project/airflow/scripts/bootstrap_connections.sh`
 
 ## Saladused ja konfiguratsioon
 
-Kõik saladused (paroolid, API võtmed, andmebaasi URL-id) on `.env` failis. Repos on ainult `.env.example`, mis näitab vajalike muutujate struktuuri ilma tegelike väärtusteta.
+Põhireegel:
+- Saladused hoitakse ainult `.env` failis.
+- Repositooriumis hoitakse ainult `.env.example`.
+- `.env` faili ei commitita.
+- Saladusi ei hardcode'ita DAG-idesse.
 
-Vajalikud muutujad:
+Nõutud peamised muutujad:
 
-| Muutuja | Tähendus | Näide |
-|---------|----------|-------|
-| `DB_PASSWORD` | PostgreSQL parool | (saladus) |
-| `[teised]` | ... | ... |
+### Supabase / Postgres
+- `SUPABASE_DB_HOST`
+- `SUPABASE_DB_PORT`
+- `SUPABASE_DB_NAME`
+- `SUPABASE_DB_USER`
+- `SUPABASE_DB_PASSWORD`
+
+### Victron VRM
+- `VRM_API_TOKEN`
+- `VRM_SITE_ID`
+
+### Open-Meteo
+- `METEO_LAT`
+- `METEO_LON`
+- `METEO_TIMEZONE`
+
+### Üldised
+- `SITE_ID`
+- `PYTHONUNBUFFERED`
+
+### Airflow admin
+- `AIRFLOW_ADMIN_USER`
+- `AIRFLOW_ADMIN_PASSWORD`
+- `AIRFLOW_ADMIN_EMAIL`
+
+### Airflow auth/API
+- `AIRFLOW__CORE__AUTH_MANAGER`
+- `AIRFLOW__API__SECRET_KEY`
+- `AIRFLOW__API_AUTH__JWT_SECRET`
 
 ## Andmevoog lühidalt
 
