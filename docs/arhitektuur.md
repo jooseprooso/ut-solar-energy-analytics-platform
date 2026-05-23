@@ -1,4 +1,4 @@
-# UT Solar Energy Analytics Platform - Arhitektuur
+# Off-grid päikeseelektrijaama telemeetria ja ilmaprognoosi analüütikaplatvorm
 
 ## Äriküsimus
 
@@ -26,7 +26,7 @@ flowchart LR
     airflow[Airflow 3 Hetzner VM-is] --> ingestLayer
     airflow --> silver
     airflow --> forecastJob
-    gha[GitHub Actions ainult CI] --> silver
+    gha[GitHub Actions (CI/manual kontroll)] --> ciChecks[Lint ja testid]
 ```
 
 Täpsem kirjeldus: see dokument
