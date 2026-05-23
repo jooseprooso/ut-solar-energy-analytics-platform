@@ -42,6 +42,7 @@ Täpsem kirjeldus: see dokument
 
 | Komponent | Tööriist |
 |-----------|---------|
+| Server | Hetzner VM 2 vCPU 4 GB RAM 40 GB SSD |
 | Sissevõtt | Airflow, Python |
 | Transformatsioon | SQL, dbt |
 | Andmehoidla | PostgreSQL |
