@@ -159,15 +159,47 @@ Testide tulemused: [kuhu salvestatakse / kuidas vaadata]
 
 ```
 .
-├── README.md
-├── compose.yml
-├── .env.example
-├── .gitignore
+├── airflow/
+│   ├── dags/
+│   ├── docker/
+│   ├── logs/
+│   ├── plugins/
+│   ├── scripts/
+│   └── docker-compose.airflow.yml
+├── dbt/
+│   ├── models/
+│   │   ├── silver/
+│   │   └── gold/
+│   ├── dbt_project.yml
+│   ├── packages.yml
+│   └── profiles.yml
 ├── docs/
-│   ├── arhitektuur.md      ← nädal 1 väljund
-│   └── progress.md         ← nädal 2 väljund
-└── ...                     ← ülejäänud projektifailid
+│   ├── arhitektuur.md
+│   ├── progress.md
+│   ├── deployment/
+│   └── runbooks/
+├── orchestration/
+├── src/
+│   ├── ingest/
+│   └── forecast/
+├── sql/
+├── tests/
+├── docker-compose.yml
+├── .env.example
+├── requirements.txt
+└── requirements-dev.txt
 ```
+
+Kaustade eesmärk lühidalt:
+- `airflow/` - orkestreerimine (DAG-id, Airflow konteineri seadistus, operatiivsed skriptid ja logid).
+- `dbt/` - andmemudelite transformatsioonid ning andmekvaliteedi testid (`silver` ja `gold` kiht).
+- `docs/` - projekti dokumentatsioon (arhitektuur, progress, deploy ja runbook juhendid).
+- `orchestration/` - ühine orkestreerimisloogika ja konfiguratsiooni abifunktsioonid.
+- `src/` - Python rakenduskood valmenduse ja prognoosi jaoks.
+- `sql/` - SQL migratsioonid ja infrastruktuuri SQL skriptid.
+- `tests/` - automaattestid (sh DAG lepingu ja andmetöötluse kontrollid).
+- Juurfailid (`docker-compose.yml`, `.env.example`, `requirements*.txt`) - lokaalne käivitus, keskkonnamuutujate mall ja sõltuvused.
+
 ## Riskid
 
 1. Väliste API-de ajutised tõrked või limiidid mõjutavad ingest-i stabiilsust.
