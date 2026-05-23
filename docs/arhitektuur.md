@@ -2,7 +2,8 @@
 
 ## Äriküsimus
 
-[Kirjelda ühe-kahe lausega, millise andmetega seotud probleemi te lahendate ja kes sellest kasu saab.]
+Kuidas mõjutavad ilmastikutingimused off-grid paigaldise energiatootmist ning kui
+täpselt on võimalik prognoosida järgmise päeva päikeseenergia tootmist?
 
 **Mõõdikud:**
 1. [Esimene KPI või mõõdik — näiteks: päevane müük poe kohta]
