@@ -39,9 +39,13 @@ services:
         ADMIN_USER="$${AIRFLOW_ADMIN_USER:-admin}" && \
         ADMIN_PASSWORD="$${AIRFLOW_ADMIN_PASSWORD:-admin}" && \
         ADMIN_EMAIL="$${AIRFLOW_ADMIN_EMAIL:-admin@example.com}" && \
-        if airflow users list | awk 'NR>2 {print $2}' | grep -qx "$${ADMIN_USER}"; then \
+        USERS_TABLE="$$(airflow users list || true)" && \
+        EXISTING_USER_BY_NAME="$$(printf '%s\n' "$${USERS_TABLE}" | awk -F'|' -v u="$${ADMIN_USER}" '/^[[:space:]]*[0-9]+[[:space:]]*\|/ {name=$2; gsub(/^[[:space:]]+|[[:space:]]+$$/, "", name); if (name==u) {print name; exit}}')" && \
+        EXISTING_USER_BY_EMAIL="$$(printf '%s\n' "$${USERS_TABLE}" | awk -F'|' -v e="$${ADMIN_EMAIL}" '/^[[:space:]]*[0-9]+[[:space:]]*\|/ {name=$2; em=$3; gsub(/^[[:space:]]+|[[:space:]]+$$/, "", name); gsub(/^[[:space:]]+|[[:space:]]+$$/, "", em); if (em==e) {print name; exit}}')" && \
+        TARGET_USER="$${EXISTING_USER_BY_NAME:-$${EXISTING_USER_BY_EMAIL}}" && \
+        if [ -n "$${TARGET_USER}" ]; then \
           airflow users reset-password \
-            --username "$${ADMIN_USER}" \
+            --username "$${TARGET_USER}" \
             --password "$${ADMIN_PASSWORD}"; \
         else \
           airflow users create \
