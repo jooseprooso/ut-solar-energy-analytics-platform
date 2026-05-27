@@ -43,6 +43,15 @@ docker compose -f airflow/docker-compose.airflow.yml up -d
 2. Identify failing external dependency (API/database).
 3. Fix underlying issue and clear task for rerun.
 
+### `dbt_deps` fails with `Permission denied ... /dbt/logs/dbt.log`
+
+Refresh runtime permissions and restart scheduler:
+
+```bash
+bash scripts/deploy/prepare_airflow_dirs.sh
+docker compose -f airflow/docker-compose.airflow.yml restart airflow-scheduler airflow-apiserver airflow-dag-processor
+```
+
 ### Task stuck in queued / logs show `sources=[]`
 
 If scheduler logs show `PermissionError` under `/opt/airflow/logs`, fix mounted folder permissions:
