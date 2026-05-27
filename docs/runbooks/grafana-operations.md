@@ -45,8 +45,16 @@ docker compose --env-file .env -f grafana/docker-compose.grafana.yml restart gra
 ## Ligipääsupoliitika
 
 - Grafana port on lokaalne (`127.0.0.1`) ja mõeldud Tailscale võrgu jaoks.
+- Väline URL on reverse proxy kaudu: `https://<tailscale-host>/grafana`.
 - Admin konto on ainult hooldajatele.
 - Tiimiliikmetele loo vajadusel eraldi kasutajad väiksemate õigustega.
+
+Tailscale suunamine proxy peale:
+
+```bash
+tailscale serve --bg http://127.0.0.1:8088
+tailscale serve status
+```
 
 ## Tervisekontroll pärast deployd
 

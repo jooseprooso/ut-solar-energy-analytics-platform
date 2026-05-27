@@ -17,7 +17,8 @@ Grafana sektsioon `.env` failis:
 - `GRAFANA_ADMIN_PASSWORD`
 - `GRAFANA_PORT` (soovitus: `3000`)
 - `GRAFANA_DOMAIN` (valikuline)
-- `GRAFANA_ROOT_URL` (valikuline)
+- `GRAFANA_ROOT_URL` (soovitus: `https://<tailscale-host>/grafana`)
+- `GF_SERVER_SERVE_FROM_SUB_PATH` (soovitus: `true`)
 - `GRAFANA_SUPABASE_SSLMODE` (Supabase jaoks `require`)
 - `GRAFANA_SUPABASE_DB_SCHEMA` (nt `gold`)
 
@@ -39,11 +40,19 @@ docker compose --env-file .env -f grafana/docker-compose.grafana.yml up -d
 docker compose --env-file .env -f grafana/docker-compose.grafana.yml ps
 ```
 
+Käivita reverse proxy (kui pole juba töös):
+
+```bash
+docker compose --env-file .env -f proxy/docker-compose.proxy.yml up -d
+tailscale serve --bg http://127.0.0.1:8088
+tailscale serve status
+```
+
 ## Ligipääs
 
 - Grafana port on binditud localhostile (`127.0.0.1:${GRAFANA_PORT}`).
-- Ava UI Tailscale võrgu kaudu VM-i seest või tunneli abil.
-- Vaikimisi URL lokaalselt VM-is: `http://127.0.0.1:${GRAFANA_PORT}`.
+- Tailscale suunatakse reverse proxyle, mis route'ib Grafana tee alla `/grafana`.
+- Ava UI: `https://<tailscale-host>/grafana`.
 
 ## Minimaalne turvabaas
 
