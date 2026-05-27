@@ -43,11 +43,6 @@ with DAG(
         python_callable=_check_runtime_config,
     )
 
-    ingest_vrm = BashOperator(
-        task_id="ingest_vrm",
-        bash_command="cd /opt/airflow/project && python src/ingest/vrm_ingest.py",
-    )
-
     ingest_meteo = BashOperator(
         task_id="ingest_meteo",
         bash_command="cd /opt/airflow/project && python src/ingest/meteo_ingest.py",
@@ -82,5 +77,4 @@ with DAG(
         bash_command="cd /opt/airflow/project && python src/forecast/run_forecast.py",
     )
 
-    validate_runtime_config >> [ingest_vrm, ingest_meteo]
-    [ingest_vrm, ingest_meteo] >> dbt_deps >> dbt_run >> dbt_test >> forecast
+    validate_runtime_config >> ingest_meteo >> dbt_deps >> dbt_run >> dbt_test >> forecast

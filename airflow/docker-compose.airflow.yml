@@ -18,8 +18,7 @@ services:
       context: ..
       dockerfile: airflow/docker/Dockerfile
     env_file:
-      - path: ../.env
-        required: false
+      - ../.env
     environment:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres:5432/airflow
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
@@ -67,8 +66,7 @@ services:
       dockerfile: airflow/docker/Dockerfile
     restart: unless-stopped
     env_file:
-      - path: ../.env
-        required: false
+      - ../.env
     environment:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres:5432/airflow
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
@@ -100,8 +98,7 @@ services:
       dockerfile: airflow/docker/Dockerfile
     restart: unless-stopped
     env_file:
-      - path: ../.env
-        required: false
+      - ../.env
     environment:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres:5432/airflow
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
@@ -109,6 +106,7 @@ services:
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
       AIRFLOW__CORE__FERNET_KEY: ""
       AIRFLOW__CORE__AUTH_MANAGER: "${AIRFLOW__CORE__AUTH_MANAGER:-airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager}"
+      AIRFLOW__CORE__EXECUTION_API_SERVER_URL: "http://airflow-apiserver:8080/execution/"
       AIRFLOW__API__SECRET_KEY: "${AIRFLOW__API__SECRET_KEY:-change_me_airflow_api_secret}"
       AIRFLOW__API_AUTH__JWT_SECRET: "${AIRFLOW__API_AUTH__JWT_SECRET:-change_me_airflow_api_auth_jwt_secret}"
       AIRFLOW_UID: 50000
@@ -131,8 +129,7 @@ services:
       dockerfile: airflow/docker/Dockerfile
     restart: unless-stopped
     env_file:
-      - path: ../.env
-        required: false
+      - ../.env
     environment:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres:5432/airflow
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
