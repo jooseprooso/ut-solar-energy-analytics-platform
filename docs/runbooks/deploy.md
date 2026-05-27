@@ -47,6 +47,29 @@ docker compose --env-file .env -f proxy/docker-compose.proxy.yml up -d
 tailscale serve --bg http://127.0.0.1:8088
 ```
 
+## GitHub Actions manual deploy
+
+Repo sisaldab manual deploy workflow'd:
+- `.github/workflows/deploy_hetzner.yml`
+
+Workflow trigger:
+- GitHub -> `Actions` -> `deploy_hetzner` -> `Run workflow`
+- `deploy_ref`: hoia `main`
+- `run_airflow_init`: kasuta `true` ainult siis, kui on vaja init samm uuesti käivitada
+
+Nõutud GitHub Secrets:
+- `HETZNER_SSH_HOST`
+- `HETZNER_SSH_USER`
+- `HETZNER_SSH_PRIVATE_KEY`
+- `HETZNER_DEPLOY_PATH`
+
+Workflow teeb serveris:
+1. `git checkout main && git pull --ff-only`
+2. Airflow stack build + `up -d`
+3. Grafana stack `up -d`
+4. Proxy stack `up -d`
+5. `tailscale serve --bg http://127.0.0.1:8088`
+
 ## Deploy-järgne valideerimine
 
 1. Compose konfiguratsioon resolve'ub korrektselt:
@@ -126,6 +149,11 @@ docker compose --env-file .env -f airflow/docker-compose.airflow.yml logs airflo
 docker compose --env-file .env -f airflow/docker-compose.airflow.yml logs airflow-apiserver --tail=200
 docker compose --env-file .env -f airflow/docker-compose.airflow.yml restart airflow-scheduler airflow-apiserver airflow-dag-processor
 ```
+
+Kui ebaõnnestumine tuli GitHub Actions workflow's:
+1. Ava ebaõnnestunud `deploy_hetzner` run.
+2. Vaata, milline serverikäsk kukkus läbi.
+3. Paranda põhjus PR-iga ja käivita workflow uuesti.
 
 Vajadusel mine tagasi eelmisele stabiilsele commitile ja deploy uuesti:
 
