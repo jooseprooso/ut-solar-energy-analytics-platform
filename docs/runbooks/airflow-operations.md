@@ -43,6 +43,15 @@ docker compose -f airflow/docker-compose.airflow.yml up -d
 2. Identify failing external dependency (API/database).
 3. Fix underlying issue and clear task for rerun.
 
+### Task stuck in queued / logs show `sources=[]`
+
+If scheduler logs show `PermissionError` under `/opt/airflow/logs`, fix mounted folder permissions:
+
+```bash
+bash scripts/deploy/prepare_airflow_dirs.sh
+docker compose -f airflow/docker-compose.airflow.yml restart airflow-scheduler airflow-apiserver airflow-dag-processor
+```
+
 ## Disaster recovery basics
 
 - Keep repo as source of truth for DAG and orchestration code.

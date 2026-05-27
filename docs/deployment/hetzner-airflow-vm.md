@@ -48,6 +48,7 @@ Fill required secrets:
 ## 3) Start Airflow stack
 
 ```bash
+bash scripts/deploy/prepare_airflow_dirs.sh
 docker compose -f airflow/docker-compose.airflow.yml up airflow-init
 docker compose -f airflow/docker-compose.airflow.yml up -d
 ```

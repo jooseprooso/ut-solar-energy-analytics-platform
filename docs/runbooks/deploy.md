@@ -39,6 +39,7 @@ Käivita serveris repositooriumi juurkaustast:
 
 ```bash
 git pull --ff-only
+bash scripts/deploy/prepare_airflow_dirs.sh
 docker compose --env-file .env -f airflow/docker-compose.airflow.yml build
 docker compose --env-file .env -f airflow/docker-compose.airflow.yml up -d airflow-init
 docker compose --env-file .env -f airflow/docker-compose.airflow.yml up -d
@@ -65,10 +66,11 @@ Nõutud GitHub Secrets:
 
 Workflow teeb serveris:
 1. `git checkout main && git pull --ff-only`
-2. Airflow stack build + `up -d`
-3. Grafana stack `up -d`
-4. Proxy stack `up -d`
-5. `tailscale serve --bg http://127.0.0.1:8088`
+2. `bash scripts/deploy/prepare_airflow_dirs.sh`
+3. Airflow stack build + `up -d`
+4. Grafana stack `up -d`
+5. Proxy stack `up -d`
+6. `tailscale serve --bg http://127.0.0.1:8088`
 
 ## Deploy-järgne valideerimine
 
@@ -113,18 +115,20 @@ Kontrolli URL-id:
 - `https://<tailscale-host>/airflow`
 - `https://<tailscale-host>/grafana`
 
-## dbt failiõiguste guardrail
+## Airflow/dbt failiõiguste guardrail
 
-Kuna konteinerid jooksevad UID `50000` all, peab mountitud `dbt/` kaust olema kirjutatav:
+Kuna konteinerid jooksevad UID `50000` all, peavad mountitud kaustad olema kirjutatavad.
+Eelistatud viis on kasutada deploy skripti:
 
 ```bash
-chown -R 50000:0 dbt
-chmod -R u+rwX,g+rwX dbt
+bash scripts/deploy/prepare_airflow_dirs.sh
 ```
 
 Kiirkontroll konteinerist:
 
 ```bash
+docker compose --env-file .env -f airflow/docker-compose.airflow.yml exec airflow-scheduler \
+  bash -lc 'touch /opt/airflow/logs/.perm_test && rm /opt/airflow/logs/.perm_test'
 docker compose --env-file .env -f airflow/docker-compose.airflow.yml exec airflow-scheduler \
   bash -lc 'touch /opt/airflow/project/dbt/.perm_test && rm /opt/airflow/project/dbt/.perm_test'
 ```
