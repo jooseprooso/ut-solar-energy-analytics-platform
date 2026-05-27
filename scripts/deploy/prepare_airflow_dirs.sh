@@ -6,8 +6,8 @@ LOG_DIR="airflow/logs"
 PROJECT_DIRS=(
   "airflow/dags"
   "airflow/plugins"
-  "dbt"
 )
+DBT_DIR="dbt"
 TARGET_DIRS=(
   "airflow/logs"
   "airflow/dags"
@@ -52,6 +52,10 @@ for dir in "${PROJECT_DIRS[@]}"; do
   run_privileged "chown -R ${PROJECT_OWNER_UID}:${PROJECT_OWNER_GID} \"${dir}\" && chmod -R u+rwX \"${dir}\""
 done
 
+# dbt needs to stay git-writable by deploy user and runtime-writable by Airflow (gid 0).
+run_privileged "chown -R ${PROJECT_OWNER_UID}:0 \"${DBT_DIR}\" && chmod -R u+rwX,g+rwX \"${DBT_DIR}\""
+
 echo "[prepare-airflow-dirs] Directory ownership and permissions are ready."
 echo "[prepare-airflow-dirs] ${LOG_DIR} -> ${AIRFLOW_UID}:0 (Airflow runtime writes logs)."
-echo "[prepare-airflow-dirs] airflow/dags, airflow/plugins, dbt -> ${PROJECT_OWNER_UID}:${PROJECT_OWNER_GID} (git-friendly)."
+echo "[prepare-airflow-dirs] airflow/dags, airflow/plugins -> ${PROJECT_OWNER_UID}:${PROJECT_OWNER_GID} (git-friendly)."
+echo "[prepare-airflow-dirs] ${DBT_DIR} -> ${PROJECT_OWNER_UID}:0 with g+rwX (git + Airflow dbt runtime)."

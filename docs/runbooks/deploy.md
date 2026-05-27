@@ -126,7 +126,8 @@ bash scripts/deploy/prepare_airflow_dirs.sh
 
 Skript seab õigused nii:
 - `airflow/logs` -> `50000:0` (Airflow saab logisid kirjutada)
-- `airflow/dags`, `airflow/plugins`, `dbt` -> deploy-user (et `git pull` ei läheks katki)
+- `airflow/dags`, `airflow/plugins` -> deploy-user (et `git pull` ei läheks katki)
+- `dbt` -> deploy-user + group `0` (`g+rwX`), et dbt runtime saaks kirjutada `dbt/logs` ja `dbt_packages`
 
 Kiirkontroll konteinerist:
 
@@ -135,6 +136,8 @@ docker compose --env-file .env -f airflow/docker-compose.airflow.yml exec airflo
   bash -lc 'touch /opt/airflow/logs/.perm_test && rm /opt/airflow/logs/.perm_test'
 docker compose --env-file .env -f airflow/docker-compose.airflow.yml exec airflow-scheduler \
   bash -lc 'touch /opt/airflow/project/dbt/.perm_test && rm /opt/airflow/project/dbt/.perm_test'
+docker compose --env-file .env -f airflow/docker-compose.airflow.yml exec airflow-scheduler \
+  bash -lc 'mkdir -p /opt/airflow/project/dbt/logs && touch /opt/airflow/project/dbt/logs/.perm_test && rm /opt/airflow/project/dbt/logs/.perm_test'
 ```
 
 ## Minimaalne turvabaas
