@@ -61,6 +61,8 @@ bash scripts/deploy/prepare_airflow_dirs.sh
 git pull --ff-only
 ```
 
+Current `deploy_hetzner` workflow now resets and cleans the repo before deploy, so this manual recovery should only be needed for one-off shell deployments.
+
 ## Disaster recovery basics
 
 - Keep repo as source of truth for DAG and orchestration code.

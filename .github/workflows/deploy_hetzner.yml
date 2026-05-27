@@ -55,8 +55,9 @@ jobs:
 
           cd "${DEPLOY_PATH}"
           git fetch origin
-          git checkout "${DEPLOY_REF}"
-          git pull --ff-only origin "${DEPLOY_REF}"
+          git checkout -f "${DEPLOY_REF}"
+          git reset --hard "origin/${DEPLOY_REF}"
+          git clean -fd
 
           bash scripts/deploy/prepare_airflow_dirs.sh
           docker compose --env-file .env -f airflow/docker-compose.airflow.yml build
