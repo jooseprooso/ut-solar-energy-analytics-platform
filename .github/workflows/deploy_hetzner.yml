@@ -55,6 +55,8 @@ jobs:
 
           cd "${DEPLOY_PATH}"
           git fetch origin
+          # Recover mount ownership before touching tracked files.
+          bash scripts/deploy/prepare_airflow_dirs.sh
           git checkout -f "${DEPLOY_REF}"
           git reset --hard "origin/${DEPLOY_REF}"
           git clean -fd
