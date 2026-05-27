@@ -2,12 +2,21 @@
 set -euo pipefail
 
 AIRFLOW_UID="${AIRFLOW_UID:-50000}"
+LOG_DIR="airflow/logs"
+PROJECT_DIRS=(
+  "airflow/dags"
+  "airflow/plugins"
+  "dbt"
+)
 TARGET_DIRS=(
   "airflow/logs"
   "airflow/dags"
   "airflow/plugins"
   "dbt"
 )
+
+PROJECT_OWNER_UID="$(id -u)"
+PROJECT_OWNER_GID="$(id -g)"
 
 run_privileged() {
   local command_str="$1"
@@ -37,8 +46,12 @@ run_privileged() {
 echo "[prepare-airflow-dirs] Ensuring required directories exist..."
 mkdir -p "${TARGET_DIRS[@]}"
 
-for dir in "${TARGET_DIRS[@]}"; do
-  run_privileged "chown -R ${AIRFLOW_UID}:0 \"${dir}\" && chmod -R u+rwX,g+rwX \"${dir}\""
+run_privileged "chown -R ${AIRFLOW_UID}:0 \"${LOG_DIR}\" && chmod -R u+rwX,g+rwX \"${LOG_DIR}\""
+
+for dir in "${PROJECT_DIRS[@]}"; do
+  run_privileged "chown -R ${PROJECT_OWNER_UID}:${PROJECT_OWNER_GID} \"${dir}\" && chmod -R u+rwX \"${dir}\""
 done
 
 echo "[prepare-airflow-dirs] Directory ownership and permissions are ready."
+echo "[prepare-airflow-dirs] ${LOG_DIR} -> ${AIRFLOW_UID}:0 (Airflow runtime writes logs)."
+echo "[prepare-airflow-dirs] airflow/dags, airflow/plugins, dbt -> ${PROJECT_OWNER_UID}:${PROJECT_OWNER_GID} (git-friendly)."

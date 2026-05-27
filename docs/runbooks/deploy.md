@@ -118,11 +118,15 @@ Kontrolli URL-id:
 ## Airflow/dbt failiõiguste guardrail
 
 Kuna konteinerid jooksevad UID `50000` all, peavad mountitud kaustad olema kirjutatavad.
-Eelistatud viis on kasutada deploy skripti:
+Eelistatud viis on kasutada deploy skripti (käivita deploy-userina, mitte rootina):
 
 ```bash
 bash scripts/deploy/prepare_airflow_dirs.sh
 ```
+
+Skript seab õigused nii:
+- `airflow/logs` -> `50000:0` (Airflow saab logisid kirjutada)
+- `airflow/dags`, `airflow/plugins`, `dbt` -> deploy-user (et `git pull` ei läheks katki)
 
 Kiirkontroll konteinerist:
 

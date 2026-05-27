@@ -52,6 +52,15 @@ bash scripts/deploy/prepare_airflow_dirs.sh
 docker compose -f airflow/docker-compose.airflow.yml restart airflow-scheduler airflow-apiserver airflow-dag-processor
 ```
 
+### Deploy fails with `git pull` permission denied
+
+If deploy logs include `unable to unlink old ... Permission denied`, restore repo-owned mounts:
+
+```bash
+bash scripts/deploy/prepare_airflow_dirs.sh
+git pull --ff-only
+```
+
 ## Disaster recovery basics
 
 - Keep repo as source of truth for DAG and orchestration code.
