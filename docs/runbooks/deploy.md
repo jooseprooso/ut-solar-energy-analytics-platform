@@ -65,7 +65,7 @@ Nõutud GitHub Secrets:
 - `HETZNER_DEPLOY_PATH`
 
 Workflow teeb serveris:
-1. `git checkout main && git pull --ff-only`
+1. `git checkout -f main && git reset --hard origin/main && git clean -fd`
 2. `bash scripts/deploy/prepare_airflow_dirs.sh`
 3. Airflow stack build + `up -d`
 4. Grafana stack `up -d`
