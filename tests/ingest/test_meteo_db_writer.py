@@ -35,10 +35,23 @@ def sample_rows():
 
 
 class TestUpsertMeteoRows:
+    def test_ensures_table_exists_before_upsert(self, mock_conn, sample_rows):
+        upsert_meteo_rows(sample_rows, mock_conn)
+        create_sql = mock_conn.cursor.return_value.execute.call_args.args[0]
+        assert "CREATE TABLE IF NOT EXISTS bronze.meteo_raw" in create_sql
+
     def test_calls_executemany_with_correct_sql(self, mock_conn, sample_rows):
         upsert_meteo_rows(sample_rows, mock_conn)
         cursor = mock_conn.cursor.return_value
         cursor.executemany.assert_called_once_with(UPSERT_SQL, sample_rows)
+
+    def test_supports_smoke_test_table_name(self, mock_conn, sample_rows):
+        upsert_meteo_rows(sample_rows, mock_conn, table_name="smoke_test_meteo_raw")
+        cursor = mock_conn.cursor.return_value
+        create_sql = cursor.execute.call_args.args[0]
+        upsert_sql = cursor.executemany.call_args.args[0]
+        assert "CREATE TABLE IF NOT EXISTS bronze.smoke_test_meteo_raw" in create_sql
+        assert "INSERT INTO bronze.smoke_test_meteo_raw" in upsert_sql
 
     def test_commits_transaction(self, mock_conn, sample_rows):
         upsert_meteo_rows(sample_rows, mock_conn)

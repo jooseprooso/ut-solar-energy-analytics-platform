@@ -45,12 +45,18 @@ with DAG(
 
     ingest_vrm = BashOperator(
         task_id="ingest_vrm",
-        bash_command="cd /opt/airflow/project && python src/ingest/vrm_ingest.py",
+        bash_command=(
+            "cd /opt/airflow/project && "
+            "BRONZE_TABLE_PREFIX=smoke_test_ python src/ingest/vrm_ingest.py"
+        ),
     )
 
     ingest_meteo = BashOperator(
         task_id="ingest_meteo",
-        bash_command="cd /opt/airflow/project && python src/ingest/meteo_ingest.py",
+        bash_command=(
+            "cd /opt/airflow/project && "
+            "BRONZE_TABLE_PREFIX=smoke_test_ python src/ingest/meteo_ingest.py"
+        ),
     )
 
     dbt_deps = BashOperator(

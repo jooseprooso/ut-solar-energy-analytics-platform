@@ -23,3 +23,4 @@ def test_solar_pipeline_dag_contract() -> None:
 
     assert "validate_runtime_config >> [ingest_vrm, ingest_meteo]" in source
     assert "[ingest_vrm, ingest_meteo] >> dbt_deps >> dbt_run >> dbt_test >> forecast" in source
+    assert source.count("BRONZE_TABLE_PREFIX=smoke_test_") == 2
