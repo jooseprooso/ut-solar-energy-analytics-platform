@@ -50,7 +50,7 @@ Täpsem kirjeldus: see dokument
 | Transformatsioon | SQL, dbt |
 | Andmehoidla | PostgreSQL |
 | Prognoos | Python |
-| Näidikulaud | Grafana |
+| Näidikulaud | Grafana (Hetzner VM, Tailscale ligipääs) |
 | Orkestreerimine | Airflow |
 
 ## Käivitamine
@@ -98,6 +98,19 @@ Airflow UI:
 Connections/Variables bootstrap:
 - `docker compose --env-file .env -f airflow/docker-compose.airflow.yml run --rm airflow-apiserver bash /opt/airflow/project/airflow/scripts/bootstrap_connections.sh`
 
+### Grafana stack (`grafana/docker-compose.grafana.yml`)
+
+Teenused:
+- `grafana` (näidikulaud + Supabase datasource provisioning)
+
+Käivita:
+1. `docker compose --env-file .env -f grafana/docker-compose.grafana.yml config`
+2. `docker compose --env-file .env -f grafana/docker-compose.grafana.yml up -d`
+3. `docker compose --env-file .env -f grafana/docker-compose.grafana.yml ps`
+
+Grafana UI:
+- Port on seotud localhostile (`127.0.0.1:3000`) ning ligipääs on Tailscale kaudu.
+
 ## Saladused ja konfiguratsioon
 
 Põhireegel:
@@ -137,6 +150,15 @@ Nõutud peamised muutujad:
 - `AIRFLOW__CORE__AUTH_MANAGER`
 - `AIRFLOW__API__SECRET_KEY`
 - `AIRFLOW__API_AUTH__JWT_SECRET`
+
+### Grafana
+- `GRAFANA_ADMIN_USER`
+- `GRAFANA_ADMIN_PASSWORD`
+- `GRAFANA_PORT`
+- `GRAFANA_DOMAIN`
+- `GRAFANA_ROOT_URL`
+- `GRAFANA_SUPABASE_SSLMODE`
+- `GRAFANA_SUPABASE_DB_SCHEMA`
 
 ## Andmevoog lühidalt
 
