@@ -60,6 +60,25 @@ class TestMain:
     @patch("src.ingest.meteo_ingest.upsert_meteo_rows")
     @patch("src.ingest.meteo_ingest.build_connection")
     @patch("src.ingest.meteo_ingest.fetch_hourly_weather")
+    def test_uses_smoke_test_prefix_when_provided(
+        self, mock_fetch, mock_build_conn, mock_upsert, full_env, monkeypatch
+    ):
+        monkeypatch.setenv("BRONZE_TABLE_PREFIX", "smoke_test_")
+        mock_fetch.return_value = {
+            "hourly_units": {"time": "iso8601", "sunshine_duration": "s"},
+            "hourly": {"time": ["2026-05-24T00:00"], "sunshine_duration": [100.0]},
+        }
+        mock_conn = Mock()
+        mock_build_conn.return_value = mock_conn
+        mock_upsert.return_value = 1
+
+        assert main() == 0
+        mock_upsert.assert_called_once()
+        assert mock_upsert.call_args.kwargs["table_name"] == "smoke_test_meteo_raw"
+
+    @patch("src.ingest.meteo_ingest.upsert_meteo_rows")
+    @patch("src.ingest.meteo_ingest.build_connection")
+    @patch("src.ingest.meteo_ingest.fetch_hourly_weather")
     def test_returns_0_when_no_rows(self, mock_fetch, mock_build_conn, mock_upsert, full_env):
         mock_fetch.return_value = {"hourly_units": {}, "hourly": {}}
         assert main() == 0

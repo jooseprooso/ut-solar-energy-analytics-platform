@@ -22,11 +22,15 @@ REQUIRED_ENV_KEYS = [
     "SUPABASE_DB_USER",
     "SUPABASE_DB_PASSWORD",
 ]
+TABLE_PREFIX_ENV = "BRONZE_TABLE_PREFIX"
 
 
 def main() -> int:
     timestamp = datetime.now(timezone.utc).isoformat()
     print(f"[meteo_ingest] Starting at {timestamp}")
+
+    table_prefix = os.getenv(TABLE_PREFIX_ENV, "")
+    table_name = f"{table_prefix}meteo_raw"
 
     try:
         validate_required_env(REQUIRED_ENV_KEYS, env=os.environ)
@@ -62,13 +66,13 @@ def main() -> int:
             user=os.environ["SUPABASE_DB_USER"],
             password=os.environ["SUPABASE_DB_PASSWORD"],
         )
-        count = upsert_meteo_rows(rows, conn)
+        count = upsert_meteo_rows(rows, conn, table_name=table_name)
         conn.close()
     except Exception as e:
         print(f"[meteo_ingest] DB write failed: {e}")
         return 1
 
-    print(f"[meteo_ingest] Successfully upserted {count} rows to bronze.meteo_raw")
+    print(f"[meteo_ingest] Successfully upserted {count} rows to bronze.{table_name}")
     return 0
 
 
