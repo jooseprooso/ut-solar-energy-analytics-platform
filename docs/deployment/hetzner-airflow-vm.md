@@ -43,6 +43,7 @@ Fill required secrets:
   - `AIRFLOW_ADMIN_USER`
   - `AIRFLOW_ADMIN_PASSWORD`
   - `AIRFLOW_ADMIN_EMAIL`
+  - `AIRFLOW_BASE_URL` (nt `https://<tailscale-host>/airflow`)
 
 ## 3) Start Airflow stack
 
@@ -51,27 +52,42 @@ docker compose -f airflow/docker-compose.airflow.yml up airflow-init
 docker compose -f airflow/docker-compose.airflow.yml up -d
 ```
 
+## 4) Start reverse proxy stack
+
+```bash
+docker compose --env-file .env -f proxy/docker-compose.proxy.yml up -d
+```
+
+## 5) Configure Tailscale entrypoint
+
+Suuna Tailscale HTTPS liiklus ainult reverse proxyle:
+
+```bash
+tailscale serve --bg http://127.0.0.1:8088
+tailscale serve status
+```
+
 Airflow UI:
 
-- `http://<VM_IP>:8080`
+- `https://<tailscale-host>/airflow`
 
-## 4) Verify scheduler health
+## 6) Verify scheduler health
 
 ```bash
 docker compose -f airflow/docker-compose.airflow.yml ps
 docker compose -f airflow/docker-compose.airflow.yml logs airflow-scheduler --tail=100
 ```
 
-## 5) Load and run the main DAG
+## 7) Load and run the main DAG
 
 - Open Airflow UI
 - Confirm DAG `pipeline_smoke_test` is present
 - Trigger manual run once
 - Verify task logs and Supabase outputs
 
-## 6) Security hardening
+## 8) Security hardening
 
-- Restrict port `8080` to team IPs if possible.
+- Restrict port `8080` to local binding (`127.0.0.1`) and keep external access through Tailscale only.
 - Use strong admin password.
 - Keep `.env` only on server and local machines (never commit).
-- Consider reverse proxy + TLS if exposed publicly.
+- Keep Tailscale as the only public entrypoint.

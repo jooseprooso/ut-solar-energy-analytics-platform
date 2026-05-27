@@ -29,6 +29,9 @@ flowchart LR
     airflow --> dbtSilver
     airflow --> dbtGold
     airflow --> forecastJob
+    tailscale[Tailscale HTTPS] --> proxy[Reverse proxy]
+    proxy --> airflowUi[Airflow UI /airflow]
+    proxy --> grafanaUi[Grafana UI /grafana]
     gha["GitHub Actions (CI/manual kontroll)"] --> ciChecks["Lint ja testid"]
 ```
 
@@ -93,7 +96,8 @@ Käivita:
 3. `docker compose --env-file .env -f airflow/docker-compose.airflow.yml up -d`
 
 Airflow UI:
-- Port on seotud localhostile (`127.0.0.1:8080`), seega ava `http://localhost:8080`.
+- Port on seotud localhostile (`127.0.0.1:8080`).
+- Väline ligipääs käib reverse proxy kaudu URL-il `https://<tailscale-host>/airflow`.
 
 Connections/Variables bootstrap:
 - `docker compose --env-file .env -f airflow/docker-compose.airflow.yml run --rm airflow-apiserver bash /opt/airflow/project/airflow/scripts/bootstrap_connections.sh`
@@ -109,7 +113,23 @@ Käivita:
 3. `docker compose --env-file .env -f grafana/docker-compose.grafana.yml ps`
 
 Grafana UI:
-- Port on seotud localhostile (`127.0.0.1:3000`) ning ligipääs on Tailscale kaudu.
+- Port on seotud localhostile (`127.0.0.1:3000`).
+- Väline ligipääs käib reverse proxy kaudu URL-il `https://<tailscale-host>/grafana`.
+
+### Reverse proxy stack (`proxy/docker-compose.proxy.yml`)
+
+Teenused:
+- `reverse-proxy` (Nginx path routing)
+
+Käivita:
+1. `docker compose --env-file .env -f proxy/docker-compose.proxy.yml up -d`
+2. `tailscale serve --bg http://127.0.0.1:8088`
+3. `tailscale serve status`
+
+URL-id:
+- `https://<tailscale-host>/` (landing page)
+- `https://<tailscale-host>/airflow`
+- `https://<tailscale-host>/grafana`
 
 ## Saladused ja konfiguratsioon
 
@@ -145,6 +165,7 @@ Nõutud peamised muutujad:
 - `AIRFLOW_ADMIN_USER`
 - `AIRFLOW_ADMIN_PASSWORD`
 - `AIRFLOW_ADMIN_EMAIL`
+- `AIRFLOW_BASE_URL`
 
 ### Airflow auth/API
 - `AIRFLOW__CORE__AUTH_MANAGER`
@@ -157,6 +178,7 @@ Nõutud peamised muutujad:
 - `GRAFANA_PORT`
 - `GRAFANA_DOMAIN`
 - `GRAFANA_ROOT_URL`
+- `GF_SERVER_SERVE_FROM_SUB_PATH`
 - `GRAFANA_SUPABASE_SSLMODE`
 - `GRAFANA_SUPABASE_DB_SCHEMA`
 
@@ -203,6 +225,10 @@ Testide tulemused: [kuhu salvestatakse / kuidas vaadata]
 │   ├── progress.md
 │   ├── deployment/
 │   └── runbooks/
+├── proxy/
+│   ├── nginx/
+│   ├── www/
+│   └── docker-compose.proxy.yml
 ├── orchestration/
 ├── src/
 │   ├── ingest/
@@ -219,6 +245,7 @@ Kaustade eesmärk lühidalt:
 - `airflow/` - orkestreerimine (DAG-id, Airflow konteineri seadistus, operatiivsed skriptid ja logid).
 - `dbt/` - andmemudelite transformatsioonid ning andmekvaliteedi testid (`silver` ja `gold` kiht).
 - `docs/` - projekti dokumentatsioon (arhitektuur, progress, deploy ja runbook juhendid).
+- `proxy/` - reverse proxy konfiguratsioon (`/`, `/airflow`, `/grafana`) Tailscale ühe sissepääsu jaoks.
 - `orchestration/` - ühine orkestreerimisloogika ja konfiguratsiooni abifunktsioonid.
 - `src/` - Python rakenduskood valmenduse ja prognoosi jaoks.
 - `sql/` - SQL migratsioonid ja infrastruktuuri SQL skriptid.

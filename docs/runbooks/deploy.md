@@ -21,9 +21,12 @@ Serveri `.env` peab sisaldama vähemalt:
 - `AIRFLOW_ADMIN_USER`
 - `AIRFLOW_ADMIN_PASSWORD`
 - `AIRFLOW_ADMIN_EMAIL`
+- `AIRFLOW_BASE_URL` (nt `https://<tailscale-host>/airflow`)
 - `AIRFLOW__CORE__AUTH_MANAGER=airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager`
 - `AIRFLOW__API__SECRET_KEY` (sama väärtus kõigis Airflow teenustes)
 - `AIRFLOW__API_AUTH__JWT_SECRET` (API JWT allkirjastamine)
+- `GRAFANA_ROOT_URL` (nt `https://<tailscale-host>/grafana`)
+- `GF_SERVER_SERVE_FROM_SUB_PATH=true`
 
 Märkused:
 
@@ -39,6 +42,9 @@ git pull --ff-only
 docker compose --env-file .env -f airflow/docker-compose.airflow.yml build
 docker compose --env-file .env -f airflow/docker-compose.airflow.yml up -d airflow-init
 docker compose --env-file .env -f airflow/docker-compose.airflow.yml up -d
+docker compose --env-file .env -f grafana/docker-compose.grafana.yml up -d
+docker compose --env-file .env -f proxy/docker-compose.proxy.yml up -d
+tailscale serve --bg http://127.0.0.1:8088
 ```
 
 ## Deploy-järgne valideerimine
@@ -53,6 +59,8 @@ docker compose --env-file .env -f airflow/docker-compose.airflow.yml config >/tm
 
 ```bash
 docker compose --env-file .env -f airflow/docker-compose.airflow.yml ps
+docker compose --env-file .env -f grafana/docker-compose.grafana.yml ps
+docker compose --env-file .env -f proxy/docker-compose.proxy.yml ps
 ```
 
 3. Airflow kasutajahaldus töötab:
@@ -70,6 +78,17 @@ docker compose --env-file .env -f airflow/docker-compose.airflow.yml exec airflo
 docker compose --env-file .env -f airflow/docker-compose.airflow.yml exec airflow-apiserver airflow config get-value core auth_manager
 docker compose --env-file .env -f airflow/docker-compose.airflow.yml exec airflow-apiserver airflow config get-value api_auth jwt_secret
 ```
+
+6. Tailscale route suunab õigesse stacki:
+
+```bash
+tailscale serve status
+```
+
+Kontrolli URL-id:
+- `https://<tailscale-host>/` (landing page)
+- `https://<tailscale-host>/airflow`
+- `https://<tailscale-host>/grafana`
 
 ## dbt failiõiguste guardrail
 
@@ -90,7 +109,7 @@ docker compose --env-file .env -f airflow/docker-compose.airflow.yml exec airflo
 ## Minimaalne turvabaas
 
 - Hoia Airflow UI piiratud võrgus (IP allowlist või VPN).
-- Soovituslik: Airflow ligipääs ainult Tailscale võrgu kaudu.
+- Soovituslik: ligipääs ainult Tailscale võrgu kaudu reverse proxy kaudu.
 - Kasuta avaliku endpointi puhul HTTPS reverse proxy taga.
 - Hoia `Admin` roll ainult hooldajatel; inseneridele `Op`/`User`.
 - Vaheta default admin parool kohe pärast esmast deployd.
