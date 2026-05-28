@@ -24,6 +24,7 @@ select
     {{ dbt_utils.generate_surrogate_key(['staging.timestamp_utc', 'staging.latitude', 'staging.longitude']) }} as meteo_hourly_key,
     {{ dbt_utils.generate_surrogate_key(['staging.timestamp_utc']) }} as time_key,
     {{ dbt_utils.generate_surrogate_key(['staging.latitude', 'staging.longitude']) }} as location_key,
+    staging.timestamp_utc,
     staging.sunshine_duration_s,
     staging.shortwave_radiation_wm2,
     staging.direct_radiation_wm2,
