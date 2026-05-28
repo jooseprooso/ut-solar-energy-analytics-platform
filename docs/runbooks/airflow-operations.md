@@ -43,6 +43,35 @@ docker compose -f airflow/docker-compose.airflow.yml up -d
 2. Identify failing external dependency (API/database).
 3. Fix underlying issue and clear task for rerun.
 
+### `dbt_deps` fails with `Permission denied ... /dbt/logs/dbt.log`
+
+Refresh runtime permissions and restart scheduler:
+
+```bash
+bash scripts/deploy/prepare_airflow_dirs.sh
+docker compose -f airflow/docker-compose.airflow.yml restart airflow-scheduler airflow-apiserver airflow-dag-processor
+```
+
+### Task stuck in queued / logs show `sources=[]`
+
+If scheduler logs show `PermissionError` under `/opt/airflow/logs`, fix mounted folder permissions:
+
+```bash
+bash scripts/deploy/prepare_airflow_dirs.sh
+docker compose -f airflow/docker-compose.airflow.yml restart airflow-scheduler airflow-apiserver airflow-dag-processor
+```
+
+### Deploy fails with `git pull` permission denied
+
+If deploy logs include `unable to unlink old ... Permission denied`, restore repo-owned mounts:
+
+```bash
+bash scripts/deploy/prepare_airflow_dirs.sh
+git pull --ff-only
+```
+
+Current `deploy_hetzner` workflow now resets and cleans the repo before deploy, so this manual recovery should only be needed for one-off shell deployments.
+
 ## Disaster recovery basics
 
 - Keep repo as source of truth for DAG and orchestration code.
