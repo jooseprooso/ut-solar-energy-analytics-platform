@@ -1,0 +1,78 @@
+name: deploy_hetzner
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_ref:
+        description: "Git ref to deploy on Hetzner (recommended: main)"
+        required: true
+        default: "main"
+      run_airflow_init:
+        description: "Run airflow-init before stack update"
+        required: true
+        default: false
+        type: boolean
+
+concurrency:
+  group: hetzner-manual-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate inputs
+        run: |
+          set -euo pipefail
+          if [ "${{ inputs.deploy_ref }}" != "main" ]; then
+            echo "Only main deploy is allowed in this workflow."
+            exit 1
+          fi
+
+      - name: Prepare SSH key
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          echo "${{ secrets.HETZNER_SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.HETZNER_SSH_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy on Hetzner over SSH
+        env:
+          DEPLOY_REF: ${{ inputs.deploy_ref }}
+          DEPLOY_PATH: ${{ secrets.HETZNER_DEPLOY_PATH }}
+          DEPLOY_USER: ${{ secrets.HETZNER_SSH_USER }}
+          DEPLOY_HOST: ${{ secrets.HETZNER_SSH_HOST }}
+          RUN_AIRFLOW_INIT: ${{ inputs.run_airflow_init }}
+        run: |
+          set -euo pipefail
+          ssh "${DEPLOY_USER}@${DEPLOY_HOST}" bash -s -- "${DEPLOY_PATH}" "${DEPLOY_REF}" "${RUN_AIRFLOW_INIT}" <<'EOF'
+          set -euo pipefail
+
+          DEPLOY_PATH="$1"
+          DEPLOY_REF="$2"
+          RUN_AIRFLOW_INIT="$3"
+
+          cd "${DEPLOY_PATH}"
+          git fetch origin
+          # Recover mount ownership before touching tracked files.
+          bash scripts/deploy/prepare_airflow_dirs.sh
+          git checkout -f "${DEPLOY_REF}"
+          git reset --hard "origin/${DEPLOY_REF}"
+          git clean -fd
+
+          bash scripts/deploy/prepare_airflow_dirs.sh
+          docker compose --env-file .env -f airflow/docker-compose.airflow.yml build
+          if [ "${RUN_AIRFLOW_INIT}" = "true" ]; then
+            docker compose --env-file .env -f airflow/docker-compose.airflow.yml up -d airflow-init
+          fi
+          docker compose --env-file .env -f airflow/docker-compose.airflow.yml up -d
+          docker compose --env-file .env -f grafana/docker-compose.grafana.yml up -d
+          docker compose --env-file .env -f proxy/docker-compose.proxy.yml up -d
+          tailscale serve --bg http://127.0.0.1:8088
+
+          docker compose --env-file .env -f airflow/docker-compose.airflow.yml ps
+          docker compose --env-file .env -f grafana/docker-compose.grafana.yml ps
+          docker compose --env-file .env -f proxy/docker-compose.proxy.yml ps
+          tailscale serve status
+          EOF
