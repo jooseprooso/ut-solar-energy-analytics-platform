@@ -68,7 +68,7 @@ jobs:
           fi
           docker compose --env-file .env -f airflow/docker-compose.airflow.yml up -d
           docker compose --env-file .env -f grafana/docker-compose.grafana.yml up -d
-          docker compose --env-file .env -f proxy/docker-compose.proxy.yml up -d
+          docker compose --env-file .env -f proxy/docker-compose.proxy.yml up -d --force-recreate
           tailscale serve --bg http://127.0.0.1:8088
 
           docker compose --env-file .env -f airflow/docker-compose.airflow.yml ps
