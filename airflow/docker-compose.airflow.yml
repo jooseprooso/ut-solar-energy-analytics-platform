@@ -40,24 +40,14 @@ services:
       - -c
       - |
         airflow db migrate && \
-        ADMIN_USER="$${AIRFLOW_ADMIN_USER:-admin}" && \
-        ADMIN_PASSWORD="$${AIRFLOW_ADMIN_PASSWORD:-admin}" && \
-        ADMIN_EMAIL="$${AIRFLOW_ADMIN_EMAIL:-admin@example.com}" && \
-        USERS_TABLE="$$(airflow users list || true)" && \
-        EXISTING_USER="$$(printf '%s\n' "$${USERS_TABLE}" | awk -F'|' -v u="$${ADMIN_USER}" '/^[[:space:]]*[0-9]+[[:space:]]*\|/ {name=$$2; gsub(/^[[:space:]]+|[[:space:]]+$$/, "", name); if (name==u) {print name; exit}}')" && \
-        if [ -n "$${EXISTING_USER}" ]; then \
-          airflow users reset-password \
-            --username "$${EXISTING_USER}" \
-            --password "$${ADMIN_PASSWORD}"; \
-        else \
-          airflow users create \
-            --username "$${ADMIN_USER}" \
-            --password "$${ADMIN_PASSWORD}" \
-            --firstname Airflow \
-            --lastname Admin \
-            --role Admin \
-            --email "$${ADMIN_EMAIL}"; \
-        fi
+        airflow users create \
+          --username "$${AIRFLOW_ADMIN_USER:-admin}" \
+          --password "$${AIRFLOW_ADMIN_PASSWORD:-admin}" \
+          --firstname Airflow \
+          --lastname Admin \
+          --role Admin \
+          --email "$${AIRFLOW_ADMIN_EMAIL:-admin@example.com}" \
+        || true
     volumes:
       - ../airflow/dags:/opt/airflow/dags
       - ../airflow/logs:/opt/airflow/logs
