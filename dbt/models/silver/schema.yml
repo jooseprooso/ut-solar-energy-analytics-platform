@@ -1,0 +1,20 @@
+version: 2
+
+models:
+  - name: stg_meteo_hourly
+    description: "Pivoted hourly weather data — one row per (timestamp, location) with metric columns"
+    columns:
+      - name: meteo_hourly_key
+        description: "Surrogate key from timestamp + lat + lon"
+        tests:
+          - unique
+          - not_null
+      - name: timestamp_utc
+        tests:
+          - not_null
+      - name: latitude
+        tests:
+          - not_null
+      - name: longitude
+        tests:
+          - not_null
