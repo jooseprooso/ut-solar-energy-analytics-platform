@@ -4,8 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     env_file:
-      - path: .env
-        required: false
+      - .env
     environment:
       DBT_PROFILES_DIR: /app/dbt
     working_dir: /app
