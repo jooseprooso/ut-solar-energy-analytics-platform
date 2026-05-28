@@ -1,0 +1,66 @@
+version: 2
+
+models:
+  - name: dim_location
+    description: "Location dimension — one row per unique (latitude, longitude)"
+    columns:
+      - name: location_key
+        description: "Surrogate key from lat + lon"
+        tests:
+          - unique
+          - not_null
+      - name: latitude
+        tests:
+          - not_null
+      - name: longitude
+        tests:
+          - not_null
+
+  - name: dim_time
+    description: "Time dimension — one row per unique hour with calendar attributes"
+    columns:
+      - name: time_key
+        description: "Surrogate key from timestamp_utc"
+        tests:
+          - unique
+          - not_null
+      - name: timestamp_utc
+        tests:
+          - unique
+          - not_null
+      - name: hour_of_day
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 23
+      - name: season
+        tests:
+          - accepted_values:
+              values: ['winter', 'spring', 'summer', 'autumn']
+
+  - name: fct_meteo_hourly
+    description: "Fact table — hourly weather metrics per location with FK references to dims"
+    columns:
+      - name: meteo_hourly_key
+        description: "Surrogate key — one row per hour per location"
+        tests:
+          - unique
+          - not_null
+      - name: time_key
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_time')
+              field: time_key
+      - name: location_key
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_location')
+              field: location_key
+      - name: cloud_cover_pct
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 100
