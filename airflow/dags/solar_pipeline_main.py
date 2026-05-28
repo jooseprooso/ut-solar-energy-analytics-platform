@@ -88,5 +88,4 @@ with DAG(
         bash_command="cd /opt/airflow/project && python src/forecast/run_forecast.py",
     )
 
-    validate_runtime_config >> [ingest_vrm, ingest_meteo]
-    [ingest_vrm, ingest_meteo] >> dbt_deps >> dbt_run >> dbt_test >> forecast
+    validate_runtime_config >> [ingest_vrm, ingest_meteo] >> dbt_deps >> dbt_run >> dbt_test >> forecast

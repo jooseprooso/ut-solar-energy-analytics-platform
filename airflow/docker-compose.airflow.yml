@@ -123,6 +123,7 @@ services:
       AIRFLOW__WEBSERVER__BASE_URL: "${AIRFLOW_BASE_URL:-http://localhost:8080/airflow}"
       AIRFLOW__WEBSERVER__ENABLE_PROXY_FIX: "true"
       AIRFLOW__CORE__AUTH_MANAGER: "${AIRFLOW__CORE__AUTH_MANAGER:-airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager}"
+      AIRFLOW__CORE__EXECUTION_API_SERVER_URL: "http://airflow-apiserver:8080/execution/"
       AIRFLOW__API__SECRET_KEY: "${AIRFLOW__API__SECRET_KEY:-change_me_airflow_api_secret}"
       AIRFLOW__API_AUTH__JWT_SECRET: "${AIRFLOW__API_AUTH__JWT_SECRET:-change_me_airflow_api_auth_jwt_secret}"
       AIRFLOW_UID: 50000
