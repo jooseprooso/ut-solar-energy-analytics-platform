@@ -32,11 +32,18 @@ services:
       AIRFLOW__API_AUTH__JWT_SECRET: "${AIRFLOW__API_AUTH__JWT_SECRET:-change_me_airflow_api_auth_jwt_secret}"
       AIRFLOW_UID: 50000
       PYTHONPATH: /opt/airflow/project
+      AIRFLOW_ADMIN_USER: "${AIRFLOW_ADMIN_USER:-admin}"
+      AIRFLOW_ADMIN_PASSWORD: "${AIRFLOW_ADMIN_PASSWORD:-admin}"
+      AIRFLOW_ADMIN_EMAIL: "${AIRFLOW_ADMIN_EMAIL:-admin@example.com}"
     entrypoint: /bin/bash
     command:
       - -c
       - |
         airflow db migrate && \
+        if airflow users list | awk 'NR>2 {print $$2}' | grep -qx "$$AIRFLOW_ADMIN_USER"; then \
+          airflow users reset-password \
+            --username "$$AIRFLOW_ADMIN_USER" \
+            --password "$$AIRFLOW_ADMIN_PASSWORD"; \
         ADMIN_USER="$${AIRFLOW_ADMIN_USER:-admin}" && \
         ADMIN_PASSWORD="$${AIRFLOW_ADMIN_PASSWORD:-admin}" && \
         ADMIN_EMAIL="$${AIRFLOW_ADMIN_EMAIL:-admin@example.com}" && \
@@ -50,12 +57,12 @@ services:
             --password "$${ADMIN_PASSWORD}"; \
         else \
           airflow users create \
-            --username "$${ADMIN_USER}" \
-            --password "$${ADMIN_PASSWORD}" \
+            --username "$$AIRFLOW_ADMIN_USER" \
+            --password "$$AIRFLOW_ADMIN_PASSWORD" \
             --firstname Airflow \
             --lastname Admin \
             --role Admin \
-            --email "$${ADMIN_EMAIL}"; \
+            --email "$$AIRFLOW_ADMIN_EMAIL"; \
         fi
     volumes:
       - ../airflow/dags:/opt/airflow/dags

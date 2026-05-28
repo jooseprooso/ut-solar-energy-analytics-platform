@@ -10,3 +10,4 @@ logs/
 airflow/logs/*
 !airflow/logs/.gitkeep
 .idea/
+CLAUDE.md
