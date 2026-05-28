@@ -2,14 +2,21 @@
   config(
     materialized='incremental',
     unique_key='meteo_hourly_key',
-    incremental_strategy='merge'
+    incremental_strategy='delete+insert'
   )
 }}
 
-with staging as (
+with
+{% if is_incremental() %}
+lookback as (
+    select max(timestamp_utc) - interval '24 hours' as cutoff from {{ this }}
+),
+{% endif %}
+
+staging as (
     select * from {{ ref('stg_meteo_hourly') }}
     {% if is_incremental() %}
-    where timestamp_utc > (select max(timestamp_utc) - interval '24 hours' from {{ this }})
+    where timestamp_utc > (select cutoff from lookback)
     {% endif %}
 )
 
