@@ -9,7 +9,7 @@
 with staging as (
     select * from {{ ref('stg_meteo_hourly') }}
     {% if is_incremental() %}
-    where timestamp_utc > (select max(timestamp_utc) - interval '72 hours' from {{ this }})
+    where timestamp_utc > (select max(timestamp_utc) - interval '24 hours' from {{ this }})
     {% endif %}
 )
 
