@@ -87,8 +87,8 @@ select
 
     case
         when vrm.pvinverter_energy_delta_kwh > 0
-        then (vrm.pv_to_consumers_kwh + vrm.pv_to_battery_kwh)
-             / vrm.pvinverter_energy_delta_kwh
+        then least(1.0, (vrm.pv_to_consumers_kwh + vrm.pv_to_battery_kwh)
+             / vrm.pvinverter_energy_delta_kwh)
     end as self_consumption_rate,
 
     case
