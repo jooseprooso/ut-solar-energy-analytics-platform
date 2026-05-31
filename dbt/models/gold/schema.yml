@@ -64,3 +64,28 @@ models:
           - dbt_expectations.expect_column_values_to_be_between:
               min_value: 0
               max_value: 100
+
+  - name: mart_meteo_hourly
+    description: "Denormalized hourly weather mart for analytics — flat table with season and daytime flags"
+    columns:
+      - name: meteo_hourly_key
+        description: "Surrogate key — one row per hour per location"
+        tests:
+          - unique
+          - not_null
+      - name: timestamp_utc
+        tests:
+          - not_null
+      - name: season
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['winter', 'spring', 'summer', 'autumn']
+      - name: is_daytime
+        tests:
+          - not_null
+      - name: cloud_cover_pct
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 100
