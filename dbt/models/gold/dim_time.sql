@@ -1,6 +1,7 @@
 with hours as (
-    select distinct timestamp_utc
-    from {{ ref('stg_meteo_hourly') }}
+    select distinct timestamp_utc from {{ ref('stg_meteo_hourly') }}
+    union
+    select fetched_hour as timestamp_utc from {{ ref('stg_vrm_energy_snapshot') }}
 )
 
 select
