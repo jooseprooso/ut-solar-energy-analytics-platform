@@ -9,4 +9,5 @@ dbt/.user.yml
 logs/
 airflow/logs/*
 !airflow/logs/.gitkeep
+.idea/
 CLAUDE.md
