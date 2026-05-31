@@ -9,14 +9,14 @@
 with
 {% if is_incremental() %}
 lookback as (
-    select max(timestamp_utc) - interval '24 hours' as cutoff from {{ this }}
+    select max(ingested_at) - interval '1 hour' as cutoff from {{ this }}
 ),
 {% endif %}
 
 staging as (
     select * from {{ ref('stg_meteo_hourly') }}
     {% if is_incremental() %}
-    where timestamp_utc > (select cutoff from lookback)
+    where ingested_at > (select cutoff from lookback)
     {% endif %}
 )
 
@@ -28,5 +28,6 @@ select
     staging.sunshine_duration_s,
     staging.shortwave_radiation_wm2,
     staging.direct_radiation_wm2,
-    staging.cloud_cover_pct
+    staging.cloud_cover_pct,
+    staging.ingested_at
 from staging
