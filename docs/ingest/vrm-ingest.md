@@ -163,5 +163,5 @@ DAG-is on seadistatud `retries=2`, `retry_delay=5min`.
 |------|-----------|
 | `src/ingest/vrm_ingest.py` | Mooduli lähtekood |
 | `airflow/dags/dag_vrm_ingest.py` | Airflow DAG |
-| `sql/003_bronze_vrm_raw.sql` | Bronze tabeli loomine |
+| `sql/004_bronze_vrm_raw.sql` | Bronze tabeli loomine |
 | `tests/ingest/test_vrm_ingest.py` | Ühiktestid |
