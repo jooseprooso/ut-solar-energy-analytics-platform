@@ -56,7 +56,7 @@ models:
       (fetched_at põhjal, 1-tunnine tagasivaatamisaken).
 
       Disainiotsuste põhjendus ja koodivaliku selgitus:
-      docs/dbt/vrm-modelling.md
+      docs/vrm-pipeline.md
     columns:
       - name: vrm_snapshot_key
         description: "Asendvõti (site_id + fetched_hour)"
