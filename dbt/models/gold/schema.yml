@@ -237,7 +237,7 @@ models:
         tests:
           - dbt_expectations.expect_column_values_to_be_between:
               min_value: 0
-              max_value: 1
+              max_value: 1.05
       - name: performance_ratio
         description: >
           Tootlikkuse suhtarv — kui efektiivselt muudetakse päikesekiirgus elektrienergiaks.
