@@ -13,9 +13,8 @@ with source as (
         fetched_hour,
         payload
     from bronze.vrm_raw
-    where endpoint = 'diagnostics'
     {% if is_incremental() %}
-    and fetched_at > (select max(fetched_at) - interval '1 hour' from {{ this }})
+    where fetched_at > (select max(fetched_at) - interval '1 hour' from {{ this }})
     {% endif %}
 ),
 
