@@ -65,6 +65,78 @@ models:
               min_value: 0
               max_value: 100
 
+  - name: fct_vrm_energy_hourly
+    description: >
+      Faktitabel — tunnitasemel päikeseenergiasüsteemi mõõdikud objekti kohta
+      (Kimball dimensioonimudel).
+
+      Graanulaarsus: üks rida (site_id, tund) kohta.
+
+      Faktide tüübid:
+        Täielikult aditiivsed (kWh energiavood) — saab liita üle aja ja objektide:
+          pv_to_battery_kwh, pv_to_consumers_kwh, grid_to_battery_kwh,
+          grid_to_consumers_kwh, battery_to_consumers_kwh,
+          pvinverter_energy_delta_kwh, battery_discharged_kwh_delta,
+          battery_charged_kwh_delta
+        Pooladitiivsed (hetkväärtused) — saab keskmistada, EI saa liita:
+          pv_total_w, load_total_w, battery_soc_pct, battery_power_w,
+          battery_voltage_v, battery_temp_c, battery_soh_pct
+        Mitteaditiivsed (kategoriaalsed olekud):
+          battery_state, system_state, grid_alarm, pvinverter_status
+
+      Äriküsimused, millele see tabel annab aluse (KPI valemid mart-kihis):
+        - Omavarustuse määr — kui suur osa tarbimisest kaeti kohapeal toodetud energiaga?
+        - Omakasutusmäär — kui suur osa PV toodangust tarbiti kohapeal?
+        - Võrgusõltuvus — kui palju energiat osteti võrgust?
+        - Aku laadimiskäitumine — millal laetakse võrgust vs päikeseenergiast?
+
+      Viitab dim_time ja dim_location dimensioonidele läbi time_key ja location_key.
+      Inkrementaalne mudel (delete+insert), 1-tunnine tagasivaatamisaken.
+    columns:
+      - name: vrm_hourly_key
+        description: "Asendvõti (site_id + timestamp_utc)"
+        tests:
+          - unique
+          - not_null
+      - name: time_key
+        description: "Viide dim_time dimensioonile"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_time')
+              field: time_key
+      - name: location_key
+        description: "Viide dim_location dimensioonile (genereeritud vrm_sites koordinaatidest)"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_location')
+              field: location_key
+      - name: site_id
+        description: "Victron VRM installatsiooni ID"
+        tests:
+          - not_null
+      - name: timestamp_utc
+        description: "Tunni alguse ajatempel UTC-s"
+        tests:
+          - not_null
+      - name: pv_total_w
+        description: "Kogu PV hetkvõimsus kolmel faasil kokku, W"
+      - name: load_total_w
+        description: "Kogu tarbimine kolmel faasil kokku, W"
+      - name: battery_soc_pct
+        description: "Aku laetuse tase (SOC), %"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 100
+      - name: battery_soh_pct
+        description: "Aku tervise näitaja (SOH), %"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 100
+
   - name: mart_meteo_hourly
     description: "Denormalized hourly weather mart for analytics — flat table with season and daytime flags"
     columns:
@@ -89,3 +161,85 @@ models:
           - dbt_expectations.expect_column_values_to_be_between:
               min_value: 0
               max_value: 100
+
+  - name: mart_solar_performance_hourly
+    description: >
+      Analüütikamart — päikeseenergia tootlikkuse analüüs koos ilmastikunäitajatega.
+      Ühendab VRM energiamõõdikud (fct_vrm_energy_hourly) ja Open-Meteo ilmaandmed
+      (fct_meteo_hourly) tunni täpsusega üheks lamedate veergudega tabeliks.
+
+      Graanulaarsus: üks rida (site_id, tund) kohta.
+
+      Põhi-KPI valemid (kõik ühikud kWh — aditiivsed faktid):
+
+        Omavarustuse määr (self-sufficiency):
+          (pv_to_consumers_kwh + battery_to_consumers_kwh)
+          / (pv_to_consumers_kwh + battery_to_consumers_kwh + grid_to_consumers_kwh)
+          → kui suur osa tarbimisest kaeti kohapeal toodetud energiaga
+
+        Omakasutusmäär (self-consumption):
+          (pv_to_consumers_kwh + pv_to_battery_kwh) / pvinverter_energy_delta_kwh
+          → kui suur osa PV toodangust tarbiti kohapeal (mitte ei eksporditud võrku)
+
+        Tootlikkuse suhtarv (performance ratio):
+          pvinverter_energy_delta_kwh / (shortwave_radiation_wm2 * paigaldise_võimsus_kw)
+          → kui efektiivselt muudetakse kiirgus elektrienergiaks
+
+      Ilmaandmed võivad puududa (LEFT JOIN), kui meteo-ingest pole töötanud.
+      Inkrementaalne mudel (delete+insert).
+    columns:
+      - name: vrm_hourly_key
+        description: "Asendvõti (site_id + timestamp_utc)"
+        tests:
+          - unique
+          - not_null
+      - name: timestamp_utc
+        description: "Tunni alguse ajatempel UTC-s"
+        tests:
+          - not_null
+      - name: site_id
+        description: "Victron VRM installatsiooni ID"
+        tests:
+          - not_null
+      - name: battery_soc_pct
+        description: "Aku laetuse tase (SOC), %"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 100
+      - name: cloud_cover_pct
+        description: "Pilvisus, % (Open-Meteo, võib olla NULL kui ilmaandmed puuduvad)"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 100
+      - name: season
+        description: "Aastaaeg (winter/spring/summer/autumn), tuleb dim_time kaudu"
+        tests:
+          - accepted_values:
+              values: ['winter', 'spring', 'summer', 'autumn']
+      - name: is_daytime
+        description: "Kas on päevavalguse aeg (kell 6–20 UTC)"
+      - name: self_sufficiency_rate
+        description: >
+          Omavarustuse määr — kui suur osa tarbimisest kaeti kohapeal toodetud energiaga.
+          (pv_to_consumers_kwh + battery_to_consumers_kwh) / kogukulutus_kwh.
+          NULL kui tarbimine puudub.
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 1
+      - name: self_consumption_rate
+        description: >
+          Omakasutusmäär — kui suur osa PV toodangust tarbiti kohapeal.
+          (pv_to_consumers_kwh + pv_to_battery_kwh) / pvinverter_energy_delta_kwh.
+          NULL kui PV toodang puudub.
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 1
+      - name: performance_ratio
+        description: >
+          Tootlikkuse suhtarv — kui efektiivselt muudetakse päikesekiirgus elektrienergiaks.
+          pvinverter_energy_delta_kwh / (shortwave_radiation_wm2 / 1000 * capacity_kw).
+          NULL kui kiirgus või ilmaandmed puuduvad.

@@ -1,8 +1,7 @@
 with locations as (
-    select distinct
-        latitude,
-        longitude
-    from {{ ref('stg_meteo_hourly') }}
+    select distinct latitude, longitude from {{ ref('stg_meteo_hourly') }}
+    union
+    select latitude, longitude from {{ ref('vrm_sites') }}
 )
 
 select

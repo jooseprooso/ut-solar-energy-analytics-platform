@@ -1,0 +1,30 @@
+version: 2
+
+seeds:
+  - name: vrm_sites
+    description: >
+      Käsitsi hallatav tabel VRM-objektide kohta. Seob Victron VRM site_id
+      geograafiliste koordinaatidega, mis võimaldab VRM-andmeid ühendada
+      ilmaandmetega (meteo) ja dim_location dimensiooniga.
+    columns:
+      - name: site_id
+        description: "Victron VRM installatsiooni ID (nt 771912)"
+        tests:
+          - unique
+          - not_null
+      - name: site_name
+        description: "Inimloetav objekti nimi"
+        tests:
+          - not_null
+      - name: latitude
+        description: "Objekti geograafiline laiuskraad (WGS84)"
+        tests:
+          - not_null
+      - name: longitude
+        description: "Objekti geograafiline pikkuskraad (WGS84)"
+        tests:
+          - not_null
+      - name: capacity_kw
+        description: "Paigaldatud PV-inverteri nimivõimsus kW-des (tootlikkuse suhtarvu nimetaja)"
+        tests:
+          - not_null
