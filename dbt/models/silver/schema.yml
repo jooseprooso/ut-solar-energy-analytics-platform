@@ -26,8 +26,8 @@ models:
       endpoint tagastab: battery_soc_pct, battery_voltage_v ja
       pvinverter_energy_delta_kwh. Kõik energiavood (Pb, Pc, Bc jne) ja
       kategoorilised olekud on NULL — /stats ei tagasta neid.
-      View (mitte inkrementaalne tabel), sest bronze.vrm_stats_raw on
-      ühekordse backfill-i tabel — pidev inkrementaalne filter pole vajalik.
+      View (mitte inkrementaalne tabel), sest bronze.vrm_stats_raw mudelis pole
+      ressursirohkeid transformatsioone.
       Kasutatakse fct_vrm_energy_hourly-s koos stg_vrm_energy_snapshot-iga
       (diagnostics võidab duplikaattundide puhul).
     columns:
