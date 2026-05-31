@@ -19,6 +19,30 @@ models:
         tests:
           - not_null
 
+  - name: stg_vrm_stats_snapshot
+    description: >
+      Hõbedakiht (view) — VRM /stats API ajaloolised andmed. Iga rida vastab ühele
+      tunnile (site_id + fetched_hour). Täidab ainult väljad, mida /stats
+      endpoint tagastab: battery_soc_pct, battery_voltage_v ja
+      pvinverter_energy_delta_kwh. Kõik energiavood (Pb, Pc, Bc jne) ja
+      kategoorilised olekud on NULL — /stats ei tagasta neid.
+      View (mitte inkrementaalne tabel), sest bronze.vrm_stats_raw on
+      ühekordse backfill-i tabel — pidev inkrementaalne filter pole vajalik.
+      Kasutatakse fct_vrm_energy_hourly-s koos stg_vrm_energy_snapshot-iga
+      (diagnostics võidab duplikaattundide puhul).
+    columns:
+      - name: vrm_snapshot_key
+        description: "Asendvõti (site_id + fetched_hour)"
+      - name: site_id
+        tests:
+          - not_null
+      - name: fetched_hour
+        tests:
+          - not_null
+      - name: fetched_at
+        tests:
+          - not_null
+
   - name: stg_vrm_energy_snapshot
     description: >
       Hõbedakiht — VRM diagnostikaandmete töötlus. Iga rida vastab ühele

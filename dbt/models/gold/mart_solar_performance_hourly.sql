@@ -67,6 +67,7 @@ select
     vrm.system_state,
     vrm.grid_alarm,
     vrm.pvinverter_status,
+    vrm.data_source,
 
     -- Ilmastik (Open-Meteo)
     meteo.shortwave_radiation_wm2,

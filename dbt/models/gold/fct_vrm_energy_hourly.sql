@@ -13,11 +13,31 @@ lookback as (
 ),
 {% endif %}
 
-staging as (
-    select * from {{ ref('stg_vrm_energy_snapshot') }}
+diagnostics as (
+    select *, 'diagnostics' as _source from {{ ref('stg_vrm_energy_snapshot') }}
     {% if is_incremental() %}
     where fetched_at > (select cutoff from lookback)
     {% endif %}
+),
+
+stats_backfill as (
+    select *, 'stats' as _source from {{ ref('stg_vrm_stats_snapshot') }}
+    {% if is_incremental() %}
+    where fetched_at > (select cutoff from lookback)
+    {% endif %}
+),
+
+staging as (
+    select *,
+        row_number() over (
+            partition by site_id, fetched_hour
+            order by case when _source = 'diagnostics' then 1 else 2 end
+        ) as _rn
+    from (
+        select * from diagnostics
+        union all
+        select * from stats_backfill
+    ) combined
 ),
 
 sites as (
@@ -59,6 +79,8 @@ select
     staging.system_state,
     staging.grid_alarm,
     staging.pvinverter_status,
+    staging._source                        as data_source,
     staging.fetched_at
 from staging
 left join sites on staging.site_id = sites.site_id
+where staging._rn = 1
