@@ -57,6 +57,15 @@ with DAG(
                 "Leave empty to use current hour boundary."
             ),
         ),
+        "chunk_days": Param(
+            default=1,
+            type="integer",
+            description=(
+                "Days of data per API request. "
+                "Max safe value is 7 — larger values trigger HTTP 202 async mode "
+                "and will fail. Use 7 for long backfills, 1 for hourly runs."
+            ),
+        ),
     },
 ) as dag:
     validate_config = PythonOperator(
@@ -68,8 +77,9 @@ with DAG(
         task_id="ingest_vrm_log",
         bash_command="cd /opt/airflow/project && python src/ingest/vrm_log_ingest.py",
         env={
-            "VRM_LOG_START": "{{ params.start_time or '' }}",
-            "VRM_LOG_END": "{{ params.end_time or '' }}",
+            "VRM_LOG_START":      "{{ params.start_time or '' }}",
+            "VRM_LOG_END":        "{{ params.end_time or '' }}",
+            "VRM_LOG_CHUNK_DAYS": "{{ params.chunk_days }}",
         },
         append_env=True,
     )

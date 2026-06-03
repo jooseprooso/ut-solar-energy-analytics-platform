@@ -234,14 +234,29 @@ lõpp  = floor(praegune aeg tunnini)
 
 Käivita DAG käsitsi parameetritega:
 
-| Parameeter | Formaat | Näide |
-|---|---|---|
-| `start_time` | `YYYY-MM-DDTHH:MM:SS` (UTC) | `2025-01-01T00:00:00` |
-| `end_time` | `YYYY-MM-DDTHH:MM:SS` (UTC) | `2026-01-01T00:00:00` |
+| Parameeter | Formaat | Vaikimisi | Näide |
+|---|---|---|---|
+| `start_time` | `YYYY-MM-DDTHH:MM:SS` (UTC) | eelmine tund | `2025-01-01T00:00:00` |
+| `end_time` | `YYYY-MM-DDTHH:MM:SS` (UTC) | praegune tunnipiir | `2026-01-01T00:00:00` |
+| `chunk_days` | täisarv 1–7 | `1` | `7` |
 
-Mõlemad tühjaks jättes kasutatakse vaikimisi viimase tunni akent.
+`start_time` ja `end_time` tühjaks jättes kasutatakse vaikimisi viimase tunni akent.
 
-Parameetrid edastatakse skriptile keskkonnamuutujatena `VRM_LOG_START` / `VRM_LOG_END`.
+Parameetrid edastatakse skriptile keskkonnamuutujatena `VRM_LOG_START` / `VRM_LOG_END` / `VRM_LOG_CHUNK_DAYS`.
+
+**`chunk_days` maksimaalne väärtus on 7.** Suuremad väärtused käivitavad VRM Reports API
+asünkroonse režiimi (HTTP 202), mis tagastab andmed e-posti teel, mitte otse API vastuses.
+Piir avastati katsetamise käigus — 7 päeva toimib, 30 päeva mitte.
+
+Soovitatav konfiguratsioon pikemate backfill-de jaoks:
+
+```json
+{
+  "start_time":  "2025-01-01T00:00:00",
+  "end_time":    "2026-01-01T00:00:00",
+  "chunk_days":  7
+}
+```
 
 ### DAG-ide võrdlus
 
@@ -284,6 +299,63 @@ ja käivitab dbt transformatsioonid. Koheseks transformeerimiseks ilma ootamata:
 dbt run --project-dir dbt --profiles-dir dbt \
   --select stg_vrm_log_hourly fct_vrm_log_hourly mart_vrm_log_hourly
 ```
+
+---
+
+## Backfill-i jõudlus — arenguajalugu
+
+Backfill-i kiirus läbis kolm iteratsiooni. Mõõtmised tehti pärisandmete peal
+(paigaldis 771912, ~480 rida päevas).
+
+### Iteratsioon 1 — algne teostus
+
+`chunk_days=1`, üks andmebaasi `execute()` kutse rea kohta.
+
+| Faas | Aeg |
+|---|---|
+| API päring (1 päev) | ~2–3 s |
+| Andmebaasi kirjutamine: 600 rida × ~100 ms (Supabase võrgulatents) | ~60 s |
+| **7 päeva kokku** (`chunk_days=1`, 7 päringut + unepaused) | **~8 min** |
+
+Kitsaskoht: iga rida = eraldi `execute()` kutse = eraldi TCP-edastus kaugandmebaasi.
+
+### Iteratsioon 2 — `chunk_days=7`
+
+API päringute arvu vähendamine, andmebaasi kirjutamine muutmata.
+
+| Faas | Aeg |
+|---|---|
+| API päring (7 päeva) | ~5 s |
+| Andmebaasi kirjutamine: 3 379 rida × ~100 ms | ~338 s |
+| **7 päeva kokku** (1 päring) | **~5,5 min** |
+
+Tulemus: API-osa kiirenes ~14×, kuid andmebaasi kirjutamine jäi endiselt kitsaskohaks.
+`chunk_days=30` katsetamine lõppes ebaõnnestumisega — VRM API lülitub asünkroonsele
+režiimile (HTTP 202) päringute puhul, mis ületavad ~7 päeva piiri.
+
+### Iteratsioon 3 — `execute_values` partiitöötlus ✅
+
+`psycopg2.extras.execute_values` pakib kõik read ühte `INSERT ... VALUES (rida1), (rida2), ...`
+lausesse. 3 379 eraldi TCP-edastuse asemel 7 edastust (500 rida pakett).
+
+| Faas | Aeg |
+|---|---|
+| API päring (7 päeva) | ~5 s |
+| Andmebaasi kirjutamine: 7 paketti × ~100 ms | ~1 s |
+| **30 päeva kokku** (`chunk_days=7`, 5 päringut + unepaused) | **~36 s** |
+
+| | Iteratsioon 1 | Iteratsioon 2 | Iteratsioon 3 |
+|---|---|---|---|
+| `chunk_days` | 1 | 7 | 7 |
+| DB kirjutamine | 1 `execute()` / rida | 1 `execute()` / rida | `execute_values`, 500 rida / pakett |
+| 7 päeva | ~8 min | ~5,5 min | ~6 s |
+| 30 päeva | ~35 min | ~28 min | ~36 s |
+| Kiirendus 30 päeva kohta | — | ~1,3× | **~55×** |
+
+**Miks see nii palju kiirendas:** kitsaskoht polnud kunagi API kiirus ega andmemaht —
+see oli võrgulatents. Iga `execute()` kutse avab uue sõnumiedastuse Supabase'i
+kaugserverisse (~100 ms). 3 379 eraldiseisvat edastust = 338 sekundit. Partiitöötlus
+koondab need 7 edastuseks = ~1 sekund. Sama loogika kehtib iga kaugandmebaasi kohta.
 
 ---
 

@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 import psycopg2
+from psycopg2.extras import execute_values
 import requests
 
 try:
@@ -72,10 +73,20 @@ _col_list = ", ".join(_FLAT_COLS)
 _placeholders = ", ".join(["%s"] * len(_FLAT_COLS))
 _conflict_set = ", ".join(f"{c} = EXCLUDED.{c}" for c in _FLAT_COLS)
 
+# Single-row upsert used by upsert_log_row (standalone / testing).
 UPSERT_SQL = (
     f"INSERT INTO bronze.vrm_log_raw "
     f"(site_id, recorded_at, fetched_at, metrics, {_col_list}) "
     f"VALUES (%s, %s, %s, %s, {_placeholders}) "
+    f"ON CONFLICT (site_id, recorded_at) DO UPDATE SET "
+    f"fetched_at = EXCLUDED.fetched_at, metrics = EXCLUDED.metrics, {_conflict_set}"
+)
+
+# Batch upsert template for execute_values — %s is replaced with all value tuples.
+UPSERT_TEMPLATE = (
+    f"INSERT INTO bronze.vrm_log_raw "
+    f"(site_id, recorded_at, fetched_at, metrics, {_col_list}) "
+    f"VALUES %s "
     f"ON CONFLICT (site_id, recorded_at) DO UPDATE SET "
     f"fetched_at = EXCLUDED.fetched_at, metrics = EXCLUDED.metrics, {_conflict_set}"
 )
@@ -91,6 +102,20 @@ class IngestConfig:
     site_id: int
     start_unix: int
     end_unix: int
+    chunk_days: int = 1
+
+
+def unix_chunks(start_unix: int, end_unix: int, chunk_days: int = 1) -> list[tuple[int, int]]:
+    if end_unix <= start_unix:
+        return []
+    span = max(1, chunk_days) * 86400
+    chunks: list[tuple[int, int]] = []
+    cur = start_unix
+    while cur < end_unix:
+        nxt = min(cur + span, end_unix)
+        chunks.append((cur, nxt))
+        cur = nxt
+    return chunks
 
 
 def download_report(
@@ -303,33 +328,31 @@ def ingest_csv_text(
     sample_tz = parse_header_timezone(row1[0] if row1 else "")
     runs = column_runs(row0)
 
-    inserted = 0
+    count = 0
+    batch: list[tuple] = []
 
-    with conn.cursor() as cur:
-        for row in rows[3:]:
-            if not row:
-                continue
-            recorded = parse_sample_time(row[0], sample_tz)
-            if recorded is None:
-                continue
-            row_pad = (row + [""] * max(0, width - len(row)))[:width]
-            metrics = build_metrics(row_pad, row0, row1, runs)
-            if not metrics:
-                continue
-            if dry_run:
-                inserted += 1
-                continue
+    for row in rows[3:]:
+        if not row:
+            continue
+        recorded = parse_sample_time(row[0], sample_tz)
+        if recorded is None:
+            continue
+        row_pad = (row + [""] * max(0, width - len(row)))[:width]
+        metrics = build_metrics(row_pad, row0, row1, runs)
+        if not metrics:
+            continue
+        count += 1
+        if not dry_run:
             flat_vals = extract_flat_values(metrics)
-            cur.execute(
-                UPSERT_SQL,
-                (site_id, recorded, fetched_at, json.dumps(metrics), *flat_vals),
-            )
-            inserted += 1
+            batch.append((site_id, recorded, fetched_at, json.dumps(metrics), *flat_vals))
 
     if not dry_run:
+        if batch:
+            with conn.cursor() as cur:
+                execute_values(cur, UPSERT_TEMPLATE, batch, page_size=500)
         conn.commit()
 
-    return inserted
+    return count
 
 
 def build_ingest_config() -> IngestConfig:
@@ -348,11 +371,20 @@ def build_ingest_config() -> IngestConfig:
             tzinfo=timezone.utc
         )
 
+    chunk_days = int(os.getenv("VRM_LOG_CHUNK_DAYS", "1"))
+    if chunk_days > 7:
+        raise ValueError(
+            f"VRM_LOG_CHUNK_DAYS={chunk_days} exceeds the safe maximum of 7. "
+            "Requests larger than ~7 days trigger HTTP 202 async mode on the "
+            "VRM Reports API. Use chunk_days=7 for long backfills."
+        )
+
     return IngestConfig(
         token=os.environ["VRM_API_TOKEN"],
         site_id=int(os.environ["VRM_SITE_ID"]),
         start_unix=int(start_dt.timestamp()),
         end_unix=int(end_dt.timestamp()),
+        chunk_days=chunk_days,
     )
 
 
@@ -382,16 +414,26 @@ def main() -> int:
 
     fetched_at = datetime.now(timezone.utc)
     session = requests.Session()
+    chunks = unix_chunks(config.start_unix, config.end_unix, config.chunk_days)
+    total = 0
+
+    print(
+        f"[vrm_log_ingest] site={config.site_id} "
+        f"{config.start_unix}→{config.end_unix} "
+        f"({len(chunks)} chunk(s) of {config.chunk_days} day(s))"
+    )
 
     try:
-        print(
-            f"[vrm_log_ingest] Downloading site={config.site_id} "
-            f"{config.start_unix}→{config.end_unix}"
-        )
-        text = download_report(session, config.token, config.site_id,
-                               config.start_unix, config.end_unix)
-        count = ingest_csv_text(text, str(config.site_id), conn, fetched_at)
-        print(f"[vrm_log_ingest] Upserted {count} rows")
+        for i, (chunk_start, chunk_end) in enumerate(chunks, 1):
+            print(f"[vrm_log_ingest] Chunk {i}/{len(chunks)}: {chunk_start}→{chunk_end}")
+            text = download_report(session, config.token, config.site_id,
+                                   chunk_start, chunk_end)
+            count = ingest_csv_text(text, str(config.site_id), conn, fetched_at)
+            total += count
+            print(f"[vrm_log_ingest]   Upserted {count} rows")
+            if i < len(chunks):
+                time.sleep(1.5)
+        print(f"[vrm_log_ingest] Done. Total rows: {total}")
     except Exception as e:
         print(f"[vrm_log_ingest] Failed: {e}")
         conn.close()

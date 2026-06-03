@@ -24,10 +24,6 @@ meteo as (
     select * from {{ ref('fct_meteo_hourly') }}
 ),
 
-time_dim as (
-    select * from {{ ref('dim_time') }}
-),
-
 sites as (
     select site_id::text as site_id, capacity_kw
     from {{ ref('vrm_sites') }}
@@ -37,6 +33,19 @@ select
     fct.vrm_log_key,
     fct.timestamp_utc,
     fct.site_id,
+
+    -- Time attributes derived directly — never NULL regardless of dim_time coverage
+    extract(hour  from fct.timestamp_utc)::int      as hour_of_day,
+    fct.timestamp_utc::date                         as date_day,
+    extract(month from fct.timestamp_utc)::int      as month,
+    case
+        when extract(month from fct.timestamp_utc) in (12, 1, 2) then 'winter'
+        when extract(month from fct.timestamp_utc) in (3, 4, 5)  then 'spring'
+        when extract(month from fct.timestamp_utc) in (6, 7, 8)  then 'summer'
+        else 'autumn'
+    end                                             as season,
+    (extract(hour from fct.timestamp_utc) between 6 and 20)
+                                                    as is_daytime,
 
     -- Required measurement fields
     fct.battery_soc_pct,
@@ -76,10 +85,6 @@ select
     meteo.sunshine_duration_s,
     meteo.cloud_cover_pct,
 
-    -- Calendar labels (dim_time, LEFT JOIN)
-    time_dim.season,
-    time_dim.is_daytime,
-
     -- KPIs
 
     -- Standard IEC 61724 performance ratio: actual yield vs theoretical max given irradiance.
@@ -91,7 +96,6 @@ select
     end                                                             as performance_ratio,
 
     -- Normalised yield — comparable across sites of different size (kWh/kWp).
-    -- NULL when capacity unknown.
     case
         when sites.capacity_kw > 0
         then fct.pv_energy_total_kwh / sites.capacity_kw
@@ -120,6 +124,5 @@ select
     fct.fetched_at
 
 from fct
-left join meteo    on fct.timestamp_utc = meteo.timestamp_utc
-left join time_dim on fct.time_key = time_dim.time_key
-left join sites    on fct.site_id = sites.site_id
+left join meteo on fct.timestamp_utc = meteo.timestamp_utc
+left join sites on fct.site_id = sites.site_id

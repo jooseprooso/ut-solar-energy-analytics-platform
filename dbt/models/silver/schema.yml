@@ -21,10 +21,18 @@ models:
 
   - name: stg_vrm_log_hourly
     description: >
-      Silver view — VRM /download log export. One row per site per UTC hour.
-      Direct column mapping from bronze.vrm_log_raw with unit suffixes added
-      and per-phase totals derived (pv_power_total_w, ac_consumption_total_w, etc.).
-      No aggregation — data is already hourly from the API.
+      Silver — VRM /download log export aggregated to hourly granularity.
+      One row per (site_id, UTC hour).
+
+      The /download endpoint returns raw device log data at sub-hourly intervals
+      (typically 15 minutes). This model aggregates to one row per hour:
+        Instantaneous measurements (W, %, V, A, °C, Hz) → AVG over samples in the hour.
+        Energy columns (kWh) → MAX - MIN (cumulative counter delta confirmed by API inspection).
+        greatest(0, ...) guards against counter resets on device restart.
+        Text columns → MAX as proxy for most recent value.
+
+      Inkrementaalne mudel (delete+insert).
+      Incremental filter: fetched_at > max(fetched_at) - 1 hour.
       Source: docs/vrm-log-pipeline.md
     columns:
       - name: vrm_log_key
@@ -62,110 +70,3 @@ models:
         description: "PV energy produced phase 3 this hour, kWh — PV Inverter [20] L3 Energy"
       - name: pv_energy_total_kwh
         description: "Total PV energy produced this hour (L1+L2+L3), kWh"
-
-  - name: stg_vrm_stats_snapshot
-    description: >
-      Hõbedakiht (view) — VRM /stats API ajaloolised andmed. Iga rida vastab ühele
-      tunnile (site_id + fetched_hour). Täidab ainult väljad, mida /stats
-      endpoint tagastab: battery_soc_pct, battery_voltage_v ja
-      pvinverter_energy_delta_kwh. Kõik energiavood (Pb, Pc, Bc jne) ja
-      kategoorilised olekud on NULL — /stats ei tagasta neid.
-      View (mitte inkrementaalne tabel), sest bronze.vrm_stats_raw mudelis pole
-      ressursirohkeid transformatsioone.
-      Kasutatakse fct_vrm_energy_hourly-s koos stg_vrm_energy_snapshot-iga
-      (diagnostics võidab duplikaattundide puhul).
-    columns:
-      - name: vrm_snapshot_key
-        description: "Asendvõti (site_id + fetched_hour)"
-      - name: site_id
-        tests:
-          - not_null
-      - name: fetched_hour
-        tests:
-          - not_null
-      - name: fetched_at
-        tests:
-          - not_null
-
-  - name: stg_vrm_energy_snapshot
-    description: >
-      Hõbedakiht — VRM diagnostikaandmete töötlus. Iga rida vastab ühele
-      tunnile ühe VRM-objekti kohta. Sama graanulaarsus kui bronze.vrm_raw
-      (site_id + fetched_hour), kuid struktuur on erinev: JSONB-plokk
-      lahtikääritakse ~25 tüpiseeritud veeruks kasutades kaheastmelist
-      jsonb_array_elements → GROUP BY MAX(CASE WHEN code=...) pööramist.
-
-      Graanulaarsus: üks rida (site_id, fetched_hour) kohta.
-      Inkrementaalne: töötleb ainult uued kirjed bronze.vrm_raw tabelist
-      (fetched_at põhjal, 1-tunnine tagasivaatamisaken).
-
-      Disainiotsuste põhjendus ja koodivaliku selgitus:
-      docs/vrm-pipeline.md
-    columns:
-      - name: vrm_snapshot_key
-        description: "Asendvõti (site_id + fetched_hour)"
-        tests:
-          - unique
-          - not_null
-      - name: site_id
-        description: "Victron VRM installatsiooni ID"
-        tests:
-          - not_null
-      - name: fetched_hour
-        description: "Tunni alguse ajatempel UTC-s"
-        tests:
-          - not_null
-      - name: fetched_at
-        description: "Tegelik API-päringu aeg UTC-s"
-        tests:
-          - not_null
-      - name: pv_total_w
-        description: "Kogu PV hetkvõimsus (L1+L2+L3), W"
-      - name: pv_l1_w
-        description: "PV hetkvõimsus faasil L1, W"
-      - name: pv_l2_w
-        description: "PV hetkvõimsus faasil L2, W"
-      - name: pv_l3_w
-        description: "PV hetkvõimsus faasil L3, W"
-      - name: load_total_w
-        description: "Kogu tarbimine (L1+L2+L3), W"
-      - name: load_l1_w
-        description: "Tarbimine faasil L1, W"
-      - name: load_l2_w
-        description: "Tarbimine faasil L2, W"
-      - name: load_l3_w
-        description: "Tarbimine faasil L3, W"
-      - name: pv_to_battery_kwh
-        description: "PV-st akusse suunatud energia perioodil, kWh"
-      - name: pv_to_consumers_kwh
-        description: "PV-st tarbijatele suunatud energia perioodil, kWh"
-      - name: grid_to_battery_kwh
-        description: "Võrgust akusse suunatud energia perioodil, kWh"
-      - name: grid_to_consumers_kwh
-        description: "Võrgust tarbijatele suunatud energia perioodil, kWh"
-      - name: battery_to_consumers_kwh
-        description: "Akust tarbijatele suunatud energia perioodil, kWh"
-      - name: battery_soc_pct
-        description: "Aku laetuse tase (State of Charge), %"
-      - name: battery_power_w
-        description: "Aku hetkvõimsus (positiivne = laadimine), W"
-      - name: battery_voltage_v
-        description: "Aku pinge, V"
-      - name: battery_temp_c
-        description: "Aku temperatuur, °C"
-      - name: battery_state
-        description: "Aku olek tekstina (nt 'charging', 'discharging', 'idle')"
-      - name: battery_soh_pct
-        description: "Aku tervise näitaja (State of Health), %"
-      - name: battery_discharged_kwh_delta
-        description: "Perioodil akust väljastatud energia, kWh"
-      - name: battery_charged_kwh_delta
-        description: "Perioodil akusse laetud energia, kWh"
-      - name: pvinverter_energy_delta_kwh
-        description: "PV inverteri koguenergia perioodil, kWh (dpE) — self-consumption arvutuse nimetaja"
-      - name: system_state
-        description: "Süsteemi olek tekstina (nt 'Inverting', 'Charging')"
-      - name: grid_alarm
-        description: "Võrgu alarmi olek tekstina (nt 'Grid ok')"
-      - name: pvinverter_status
-        description: "PV-inverteri olek tekstina (nt 'Running', 'Off')"
