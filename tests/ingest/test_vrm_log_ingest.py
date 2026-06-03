@@ -6,7 +6,6 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
-import requests as req
 
 from src.ingest.vrm_log_ingest import (
     FLAT_COLUMN_MAP,
