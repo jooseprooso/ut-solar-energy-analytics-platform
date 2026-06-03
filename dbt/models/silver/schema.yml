@@ -19,6 +19,50 @@ models:
         tests:
           - not_null
 
+  - name: stg_vrm_log_hourly
+    description: >
+      Silver view — VRM /download log export. One row per site per UTC hour.
+      Direct column mapping from bronze.vrm_log_raw with unit suffixes added
+      and per-phase totals derived (pv_power_total_w, ac_consumption_total_w, etc.).
+      No aggregation — data is already hourly from the API.
+      Source: docs/vrm-log-pipeline.md
+    columns:
+      - name: vrm_log_key
+        description: "Surrogate key (site_id + recorded_at)"
+        tests:
+          - unique
+          - not_null
+      - name: site_id
+        tests:
+          - not_null
+      - name: recorded_at
+        description: "Hour timestamp in UTC"
+        tests:
+          - not_null
+      - name: fetched_at
+        tests:
+          - not_null
+      - name: battery_soc_pct
+        description: "Battery state of charge, % — Battery Monitor [512] State of charge"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 100
+      - name: ac_consumption_l1_w
+        description: "AC load power phase 1, W — System overview [0] AC Consumption L1"
+      - name: ac_consumption_l2_w
+        description: "AC load power phase 2, W — System overview [0] AC Consumption L2"
+      - name: ac_consumption_l3_w
+        description: "AC load power phase 3, W — System overview [0] AC Consumption L3"
+      - name: pv_energy_l1_kwh
+        description: "PV energy produced phase 1 this hour, kWh — PV Inverter [20] L1 Energy"
+      - name: pv_energy_l2_kwh
+        description: "PV energy produced phase 2 this hour, kWh — PV Inverter [20] L2 Energy"
+      - name: pv_energy_l3_kwh
+        description: "PV energy produced phase 3 this hour, kWh — PV Inverter [20] L3 Energy"
+      - name: pv_energy_total_kwh
+        description: "Total PV energy produced this hour (L1+L2+L3), kWh"
+
   - name: stg_vrm_stats_snapshot
     description: >
       Hõbedakiht (view) — VRM /stats API ajaloolised andmed. Iga rida vastab ühele
