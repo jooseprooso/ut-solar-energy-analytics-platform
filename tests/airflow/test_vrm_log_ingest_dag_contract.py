@@ -24,7 +24,8 @@ def test_backfill_params_present() -> None:
     source = Path("airflow/dags/dag_vrm_log_ingest.py").read_text()
     assert '"start_time"' in source
     assert '"end_time"' in source
-    # params must allow null so the UI field can be left blank
+    assert '"chunk_days"' in source
+    # start/end must allow null so the UI field can be left blank
     assert '["null", "string"]' in source
 
 

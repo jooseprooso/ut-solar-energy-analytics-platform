@@ -19,8 +19,11 @@ from src.ingest.vrm_log_ingest import (
     main,
     parse_header_timezone,
     parse_sample_time,
+    unix_chunks,
     upsert_log_row,
 )
+
+_EV = "src.ingest.vrm_log_ingest.execute_values"
 
 # ---------------------------------------------------------------------------
 # Shared fixtures
@@ -53,6 +56,42 @@ def _mock_conn():
     conn.cursor.return_value.__enter__ = MagicMock(return_value=cursor)
     conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
     return conn, cursor
+
+
+# ---------------------------------------------------------------------------
+# TestUnixChunks
+# ---------------------------------------------------------------------------
+
+class TestUnixChunks:
+    def test_single_chunk_when_range_less_than_one_day(self):
+        assert unix_chunks(0, 3600, chunk_days=1) == [(0, 3600)]
+
+    def test_splits_range_into_daily_chunks(self):
+        chunks = unix_chunks(0, 3 * 86400, chunk_days=1)
+        assert len(chunks) == 3
+        assert chunks[0] == (0, 86400)
+        assert chunks[1] == (86400, 2 * 86400)
+        assert chunks[2] == (2 * 86400, 3 * 86400)
+
+    def test_last_chunk_is_clipped_to_end(self):
+        chunks = unix_chunks(0, 86400 + 3600, chunk_days=1)
+        assert len(chunks) == 2
+        assert chunks[1] == (86400, 86400 + 3600)
+
+    def test_returns_empty_when_end_before_start(self):
+        assert unix_chunks(100, 50) == []
+
+    def test_returns_empty_when_start_equals_end(self):
+        assert unix_chunks(100, 100) == []
+
+    def test_respects_chunk_days(self):
+        chunks = unix_chunks(0, 7 * 86400, chunk_days=7)
+        assert len(chunks) == 1
+        assert chunks[0] == (0, 7 * 86400)
+
+    def test_multi_day_chunk_splits_correctly(self):
+        chunks = unix_chunks(0, 14 * 86400, chunk_days=7)
+        assert len(chunks) == 2
 
 
 # ---------------------------------------------------------------------------
@@ -390,34 +429,49 @@ class TestIngestCsvText:
 
     def test_returns_count_of_data_rows(self):
         conn, _ = _mock_conn()
-        count = ingest_csv_text(SAMPLE_CSV, "771912", conn,
-                                datetime(2026, 1, 1, 12, tzinfo=timezone.utc))
+        with patch(_EV):
+            count = ingest_csv_text(SAMPLE_CSV, "771912", conn,
+                                    datetime(2026, 1, 1, 12, tzinfo=timezone.utc))
         assert count == 2
 
     def test_dry_run_skips_db_writes(self):
-        conn, cursor = _mock_conn()
-        ingest_csv_text(SAMPLE_CSV, "771912", conn,
-                        datetime(2026, 1, 1, 12, tzinfo=timezone.utc), dry_run=True)
-        cursor.execute.assert_not_called()
+        conn, _ = _mock_conn()
+        with patch(_EV) as mock_ev:
+            ingest_csv_text(SAMPLE_CSV, "771912", conn,
+                            datetime(2026, 1, 1, 12, tzinfo=timezone.utc), dry_run=True)
+        mock_ev.assert_not_called()
+        conn.commit.assert_not_called()
 
     def test_skips_blank_rows(self):
         conn, _ = _mock_conn()
-        count = ingest_csv_text(SAMPLE_CSV + "\n\n", "771912", conn,
-                                datetime(2026, 1, 1, 12, tzinfo=timezone.utc))
+        with patch(_EV):
+            count = ingest_csv_text(SAMPLE_CSV + "\n\n", "771912", conn,
+                                    datetime(2026, 1, 1, 12, tzinfo=timezone.utc))
         assert count == 2
 
     def test_commits_after_processing(self):
         conn, _ = _mock_conn()
-        ingest_csv_text(SAMPLE_CSV, "771912", conn,
-                        datetime(2026, 1, 1, 12, tzinfo=timezone.utc))
+        with patch(_EV):
+            ingest_csv_text(SAMPLE_CSV, "771912", conn,
+                            datetime(2026, 1, 1, 12, tzinfo=timezone.utc))
         conn.commit.assert_called_once()
 
+    def test_all_rows_sent_in_single_execute_values_call(self):
+        conn, _ = _mock_conn()
+        with patch(_EV) as mock_ev:
+            ingest_csv_text(SAMPLE_CSV, "771912", conn,
+                            datetime(2026, 1, 1, 12, tzinfo=timezone.utc))
+        mock_ev.assert_called_once()
+        batch = mock_ev.call_args[0][2]
+        assert len(batch) == 2
+
     def test_timestamps_converted_to_utc(self):
-        conn, cursor = _mock_conn()
-        ingest_csv_text(SAMPLE_CSV, "771912", conn,
-                        datetime(2026, 1, 1, 12, tzinfo=timezone.utc))
-        first_params = cursor.execute.call_args_list[0][0][1]
-        recorded_at = first_params[1]
+        conn, _ = _mock_conn()
+        with patch(_EV) as mock_ev:
+            ingest_csv_text(SAMPLE_CSV, "771912", conn,
+                            datetime(2026, 1, 1, 12, tzinfo=timezone.utc))
+        batch = mock_ev.call_args[0][2]
+        recorded_at = batch[0][1]
         # 2026-01-01 12:00:00 Europe/Tallinn → 10:00 UTC (UTC+2 in January, EET)
         assert recorded_at == datetime(2026, 1, 1, 10, 0, tzinfo=timezone.utc)
 
@@ -539,6 +593,24 @@ class TestBuildIngestConfig:
         config = build_ingest_config()
         assert config.end_unix == int(datetime(2026, 1, 2, tzinfo=timezone.utc).timestamp())
 
+    def test_default_chunk_days_is_1(self, monkeypatch):
+        for k, v in FULL_ENV.items():
+            monkeypatch.setenv(k, v)
+        assert build_ingest_config().chunk_days == 1
+
+    def test_chunk_days_override_via_env(self, monkeypatch):
+        for k, v in FULL_ENV.items():
+            monkeypatch.setenv(k, v)
+        monkeypatch.setenv("VRM_LOG_CHUNK_DAYS", "7")
+        assert build_ingest_config().chunk_days == 7
+
+    def test_chunk_days_above_7_raises(self, monkeypatch):
+        for k, v in FULL_ENV.items():
+            monkeypatch.setenv(k, v)
+        monkeypatch.setenv("VRM_LOG_CHUNK_DAYS", "8")
+        with pytest.raises(ValueError, match="exceeds the safe maximum"):
+            build_ingest_config()
+
 
 # ---------------------------------------------------------------------------
 # TestMain
@@ -587,3 +659,21 @@ class TestMain:
     def test_closes_connection_on_failure(self, _dl, _sess, mock_conn, env_vars):
         main()
         mock_conn.return_value.close.assert_called_once()
+
+    @patch("src.ingest.vrm_log_ingest.time.sleep")
+    @patch("src.ingest.vrm_log_ingest.psycopg2.connect")
+    @patch("src.ingest.vrm_log_ingest.requests.Session")
+    @patch("src.ingest.vrm_log_ingest.download_report", return_value=SAMPLE_CSV)
+    @patch("src.ingest.vrm_log_ingest.ingest_csv_text", return_value=2)
+    def test_calls_download_once_per_chunk(
+        self, _ingest, mock_dl, _sess, _conn, mock_sleep, monkeypatch
+    ):
+        for k, v in FULL_ENV.items():
+            monkeypatch.setenv(k, v)
+        # 3-day backfill with chunk_days=1 → 3 download calls
+        monkeypatch.setenv("VRM_LOG_START", "2026-01-01T00:00:00")
+        monkeypatch.setenv("VRM_LOG_END", "2026-01-04T00:00:00")
+        monkeypatch.setenv("VRM_LOG_CHUNK_DAYS", "1")
+        main()
+        assert mock_dl.call_count == 3
+        assert mock_sleep.call_count == 2  # sleep between chunks, not after last
