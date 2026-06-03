@@ -137,6 +137,159 @@ models:
               min_value: 0
               max_value: 100
 
+  - name: fct_vrm_log_hourly
+    description: >
+      Kimball fact table — hourly VRM log export data per site with surrogate keys
+      and dimension FKs. One row per (site_id, hour). No KPIs — those live in the mart.
+      Source: stg_vrm_log_hourly. See docs/vrm-log-pipeline.md.
+    columns:
+      - name: vrm_log_key
+        description: "Surrogate PK (site_id + timestamp_utc)"
+        tests:
+          - unique
+          - not_null
+      - name: time_key
+        description: "FK → dim_time"
+        tests:
+          - not_null
+      - name: location_key
+        description: "FK → dim_location (from vrm_sites lat/lon)"
+        tests:
+          - not_null
+      - name: site_id
+        tests:
+          - not_null
+      - name: timestamp_utc
+        tests:
+          - not_null
+      - name: battery_soc_pct
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 100
+
+  - name: mart_vrm_log_hourly
+    description: >
+      Analytics mart — VRM log export joined with Open-Meteo weather data and KPIs.
+      One row per (site_id, hour). All fact columns passed through; mart adds
+      weather, calendar labels (season, is_daytime), and five KPIs:
+      performance_ratio, specific_yield_kwh_per_kwp, battery_net_kwh,
+      grid_import_kwh_estimate, pv_cover_ratio.
+
+      Required fields present: battery_soc_pct, ac_consumption_l1/l2/l3_w,
+      pv_energy_l1/l2/l3_kwh (per docs/vrm-log-pipeline.md).
+
+      Note: pv_cover_ratio is an estimate — it does not use GX internal energy-flow
+      accounting, unlike self_sufficiency_rate in mart_solar_performance_hourly.
+    columns:
+      - name: vrm_log_key
+        description: "Surrogate PK (site_id + timestamp_utc)"
+        tests:
+          - unique
+          - not_null
+      - name: timestamp_utc
+        tests:
+          - not_null
+      - name: site_id
+        tests:
+          - not_null
+      - name: battery_soc_pct
+        description: "Battery state of charge, % — Battery Monitor [512] State of charge"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 100
+      - name: battery_voltage_v
+        description: "Battery terminal voltage, V — Battery Monitor [512] Voltage"
+      - name: battery_current_a
+        description: "Battery current, A — Battery Monitor [512] Current. Positive = charging, negative = discharging"
+      - name: battery_power_w
+        description: "Battery power, W — System overview [0] Battery Power. Positive = charging"
+      - name: battery_temp_c
+        description: "Battery cell temperature, °C — Battery Monitor [512] Battery temperature"
+      - name: battery_discharged_kwh
+        description: "Energy discharged from battery this hour, kWh — Battery Monitor [512] Discharged Energy"
+      - name: battery_charged_kwh
+        description: "Energy charged into battery this hour, kWh — Battery Monitor [512] Charged Energy"
+      - name: ac_consumption_l1_w
+        description: "AC load power phase 1, W — System overview [0] AC Consumption L1. Required field."
+      - name: ac_consumption_l2_w
+        description: "AC load power phase 2, W — System overview [0] AC Consumption L2. Required field."
+      - name: ac_consumption_l3_w
+        description: "AC load power phase 3, W — System overview [0] AC Consumption L3. Required field."
+      - name: ac_consumption_total_w
+        description: "Total AC load power (L1+L2+L3), W. NULL if all phases NULL."
+      - name: pv_power_l1_w
+        description: "PV inverter AC output power phase 1, W — PV Inverter [20] L1 Power"
+      - name: pv_power_l2_w
+        description: "PV inverter AC output power phase 2, W — PV Inverter [20] L2 Power"
+      - name: pv_power_l3_w
+        description: "PV inverter AC output power phase 3, W — PV Inverter [20] L3 Power"
+      - name: pv_power_total_w
+        description: "Total PV inverter AC output power (L1+L2+L3), W. NULL if all phases NULL."
+      - name: pv_energy_l1_kwh
+        description: "PV energy produced phase 1 this hour, kWh — PV Inverter [20] L1 Energy. Required field."
+      - name: pv_energy_l2_kwh
+        description: "PV energy produced phase 2 this hour, kWh — PV Inverter [20] L2 Energy. Required field."
+      - name: pv_energy_l3_kwh
+        description: "PV energy produced phase 3 this hour, kWh — PV Inverter [20] L3 Energy. Required field."
+      - name: pv_energy_total_kwh
+        description: "Total PV energy produced this hour (L1+L2+L3), kWh. NULL if all phases NULL."
+      - name: grid_input_power_l1_w
+        description: "Grid input power phase 1, W — VE.Bus System [276] Input power 1. Positive = import."
+      - name: grid_input_power_l2_w
+        description: "Grid input power phase 2, W — VE.Bus System [276] Input power 2"
+      - name: grid_input_power_l3_w
+        description: "Grid input power phase 3, W — VE.Bus System [276] Input power 3"
+      - name: grid_input_power_total_w
+        description: "Total grid input power (L1+L2+L3), W. NULL if all phases NULL."
+      - name: grid_alarm
+        description: "Grid alarm state string — System overview [276] Grid alarm"
+      - name: shortwave_radiation_wm2
+        description: "Global horizontal irradiance, W/m² — Open-Meteo. NULL when meteo unavailable."
+      - name: direct_radiation_wm2
+        description: "Direct normal irradiance, W/m² — Open-Meteo. NULL when meteo unavailable."
+      - name: sunshine_duration_s
+        description: "Sunshine duration within the hour, seconds — Open-Meteo. NULL when meteo unavailable."
+      - name: cloud_cover_pct
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 100
+      - name: performance_ratio
+        description: >
+          IEC 61724 performance ratio: pv_energy_total_kwh / (shortwave_radiation_wm2 / 1000 * capacity_kw).
+          NULL when radiation ≤50 W/m² or capacity unknown.
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 2
+      - name: specific_yield_kwh_per_kwp
+        description: "Normalised yield kWh/kWp — pv_energy_total_kwh / capacity_kw"
+      - name: battery_net_kwh
+        description: "Net battery energy this hour: battery_charged_kwh - battery_discharged_kwh. Positive = net charging."
+      - name: grid_import_kwh_estimate
+        description: "Hourly grid import estimate (kWh) from average grid power. Labelled _estimate: assumes constant power within the hour."
+      - name: pv_cover_ratio
+        description: >
+          Supply-side self-sufficiency proxy: pv_energy_total_kwh / (pv_energy_total_kwh + grid_import_kwh_estimate).
+          Approximate — no GX energy-flow accounting.
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 1
+      - name: season
+        description: "Calendar season (winter/spring/summer/autumn) from dim_time. NULL if hour not yet in dim_time."
+        tests:
+          - accepted_values:
+              values: ['winter', 'spring', 'summer', 'autumn']
+      - name: is_daytime
+        description: "True when hour is between 06:00 and 20:00 UTC (dim_time). NULL if hour not yet in dim_time."
+      - name: fetched_at
+        description: "Timestamp of the ingest run that produced this row, UTC"
+        tests:
+          - not_null
+
   - name: mart_meteo_hourly
     description: "Denormalized hourly weather mart for analytics — flat table with season and daytime flags"
     columns:
