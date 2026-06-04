@@ -12,18 +12,11 @@ def test_solar_analytics_dag_contract() -> None:
 
     for task_id in [
         "validate_runtime_config",
-        "ingest_vrm",
-        "ingest_meteo",
-        "dbt_deps",
-        "dbt_run",
-        "dbt_test",
         "forecast",
         "dbt_run_forecast_marts",
     ]:
         assert f'task_id="{task_id}"' in source
 
-    assert "[ingest_vrm, ingest_meteo]" in source
-    assert ">> forecast" in source
-    assert ">> dbt_run_forecast_marts" in source
+    assert ">> forecast >> dbt_run_forecast_marts" in source
 
     assert "BRONZE_TABLE_PREFIX" not in source, "Prod DAG must not use smoke test prefix"

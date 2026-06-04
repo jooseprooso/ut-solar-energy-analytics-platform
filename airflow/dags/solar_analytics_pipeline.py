@@ -32,7 +32,7 @@ default_args = {
 
 with DAG(
     dag_id="solar_analytics_hourly",
-    description="Production pipeline: ingest, dbt, forecast, accuracy mart",
+    description="Forecast pipeline: predict next-day PV production, build accuracy mart",
     start_date=datetime(2026, 1, 1),
     schedule="@hourly",
     catchup=False,
@@ -43,31 +43,6 @@ with DAG(
     validate_runtime_config = PythonOperator(
         task_id="validate_runtime_config",
         python_callable=_check_runtime_config,
-    )
-
-    ingest_vrm = BashOperator(
-        task_id="ingest_vrm",
-        bash_command="cd /opt/airflow/project && python src/ingest/vrm_ingest.py",
-    )
-
-    ingest_meteo = BashOperator(
-        task_id="ingest_meteo",
-        bash_command="cd /opt/airflow/project && python src/ingest/meteo_ingest.py",
-    )
-
-    dbt_deps = BashOperator(
-        task_id="dbt_deps",
-        bash_command="cd /opt/airflow/project && dbt deps --project-dir dbt --profiles-dir dbt",
-    )
-
-    dbt_run = BashOperator(
-        task_id="dbt_run",
-        bash_command="cd /opt/airflow/project && dbt run --project-dir dbt --profiles-dir dbt",
-    )
-
-    dbt_test = BashOperator(
-        task_id="dbt_test",
-        bash_command="cd /opt/airflow/project && dbt test --project-dir dbt --profiles-dir dbt",
     )
 
     forecast = BashOperator(
@@ -84,12 +59,4 @@ with DAG(
         ),
     )
 
-    (
-        validate_runtime_config
-        >> [ingest_vrm, ingest_meteo]
-        >> dbt_deps
-        >> dbt_run
-        >> dbt_test
-        >> forecast
-        >> dbt_run_forecast_marts
-    )
+    validate_runtime_config >> forecast >> dbt_run_forecast_marts
