@@ -184,23 +184,28 @@ Nõutud peamised muutujad:
 
 ## Andmevoog lühidalt
 
-1. **Sissevõtt** — [Kirjelda, kuidas andmed allikast kätte saadakse]
-2. **Laadimine** — Andmed laaditakse `staging` kihti
-3. **Transformatsioon** — [Kirjelda peamised arvutused ja mudelid]
-4. **Testimine** — [Mitu] andmekvaliteedi testi kontrollivad korrektsust
-5. **Näidikulaud** — [Kirjelda lühidalt, mida näidikulaud näitab]
+1. **Sissevõtt** — Airflow DAG-id käivitavad tunnikaupa VRM API (diagnostika + logid) ja Open-Meteo API (ilmaprognoos) andmete laadimise `bronze` kihti.
+2. **Laadimine** — dbt silver mudelid puhastavad ja standardiseerivad bronze andmed (`stg_vrm_log_hourly`, `stg_meteo_hourly`).
+3. **Transformatsioon** — dbt gold mudelid loovad analüüsivalmis martid: `mart_vrm_log_hourly` (VRM + meteo ühes reas), `mart_solar_performance_hourly` (reaalajas diagnostika vaade).
+4. **Prognoos** — Python Ridge regressioon loeb `gold.mart_vrm_log_hourly`, walk-forward backtest + live prognoos → kirjutab `gold.fct_pv_forecast_hourly`.
+5. **KPI-d** — dbt `mart_forecast_accuracy_daily` arvutab päevased MAE, error kWh ja error % mõõdikud.
+6. **Testimine** — 10+ andmekvaliteedi testi (dbt_expectations): battery SOC 0-100%, pilvisus 0-100%, prognoosid ≥0 kWh jne.
+7. **Näidikulaud** — Grafana näitab 3 KPI-d: MAE (kWh), tegelik vs prognoos (aegrida), viga (%).
 
 ## Andmekvaliteedi testid
 
 Projekt kontrollib järgmist:
 
-1. [Test 1 - nt: kasutajate ID on unikaalne]
-2. [Test 2 - nt: tellimuse summa pole null]
-3. [Test 3 - nt: kuupäev jääb vahemikku 2020-2026]
+1. `mart_vrm_log_hourly.vrm_log_key` — unikaalne ja not_null
+2. `fct_meteo_hourly.meteo_key` — unikaalne ja not_null
+3. `mart_vrm_log_hourly.battery_soc_pct` — vahemikus 0–100 (dbt_expectations)
+4. `mart_vrm_log_hourly.cloud_cover_pct` — vahemikus 0–100
+5. `mart_vrm_log_hourly.capacity_factor` — vahemikus 0–1
+6. `fct_pv_forecast_hourly.pv_energy_forecast_kwh` — not_null ja ≥0
+7. `mart_forecast_accuracy_daily.abs_error_kwh` — not_null ja vahemikus 0–200
+8. `mart_forecast_accuracy_daily.date_day` — not_null
 
-[Lisa rohkem, kui sul on]
-
-Testide tulemused: [kuhu salvestatakse / kuidas vaadata]
+Testide tulemused: `dbt test` väljund Airflow logides + Grafana paneeli kaudu visuaalselt
 
 ## Projekti struktuur
 
@@ -261,13 +266,20 @@ Kaustade eesmärk lühidalt:
 ## Kokkuvõte, puudused ja võimalikud edasiarendused
 
 **Kokkuvõte:**
-- [Loetle, mis on lõpule viidud, mis töötab hästi]
+- Automatiseeritud end-to-end pipeline: VRM + meteo ingest → dbt silver/gold → Python prognoos → Grafana dashboard
+- Ridge regression mudel ennustab järgmise päeva PV tootmist tunni grainiga
+- 3 KPI-d (MAE, erinevus kWh, erinevus %) arvutatakse `mart_forecast_accuracy_daily` kaudu
+- Walk-forward backtest tagab, et prognoos ei kasuta tuleviku andmeid
 
 **Puudused:**
-- [Loetle ausalt, mis jäi tegemata - see ei mõjuta hinnet negatiivselt, vaid aitab hinnata]
+- Hindcast kasutab tegelikke ilmaandmeid (mitte meteoprognoosi) — MAE on optimistlik
+- ~35 päeva ajalugu — mudeli täpsus paraneb andmemahu kasvuga
+- Live prognoosi MAE eraldi ei hinnata (liiga vähe kogunenud päevi)
 
 **Mis edasi:**
-- [Mida tahaksid edasi teha, kui aega oleks rohkem]
+- Gradient boosting mudel rohkema ajalooga
+- Eraldi live vs hindcast MAE paneel kui andmeid jätkub
+- Alertid Grafana kaudu kui prognoos ületab lävendi
 
 ## Meeskond
 

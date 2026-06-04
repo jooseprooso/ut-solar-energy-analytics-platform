@@ -327,3 +327,28 @@ models:
           Tootlikkuse suhtarv — kui efektiivselt muudetakse päikesekiirgus elektrienergiaks.
           pvinverter_energy_delta_kwh / (shortwave_radiation_wm2 / 1000 * capacity_kw).
           NULL kui kiirgus või ilmaandmed puuduvad.
+
+  - name: mart_forecast_accuracy_daily
+    description: >
+      Daily forecast accuracy mart — compares actual PV production from
+      mart_vrm_log_hourly with forecasts from fct_pv_forecast_hourly.
+      One row per (site_id, date_day, forecast_type).
+    columns:
+      - name: site_id
+        tests:
+          - not_null
+      - name: date_day
+        tests:
+          - not_null
+      - name: pv_energy_actual_kwh
+        tests:
+          - not_null
+      - name: pv_energy_forecast_kwh
+        tests:
+          - not_null
+      - name: abs_error_kwh
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 200

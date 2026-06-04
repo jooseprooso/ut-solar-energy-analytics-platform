@@ -29,3 +29,25 @@
 - Plaan:
   - Grafana vaadete tegemine
   - Prognoosimudeli arendamine (ajaloolised VRM + meteo andmed aluseks)
+- Valmis:
+  - PV prognoosimudel (Ridge regressioon, scikit-learn):
+    - Walk-forward backtest üle kogu ajaloo (forecast_type='backtest')
+    - Live prognoos järgmiseks päevaks (forecast_type='live')
+    - Treeningandmed ainult gold.mart_vrm_log_hourly-st
+    - Forecast upsert gold.fct_pv_forecast_hourly tabelisse
+    - 12 ühiktesti (model, backtest, db writer idempotentsus)
+  - dbt mart_forecast_accuracy_daily — päevased KPI-d:
+    - MAE (kWh), tegeliku ja prognoosi erinevus (kWh), erinevus (%)
+    - DQ testid: not_null, abs_error_kwh vahemikus 0–200
+  - Grafana Solar KPI Overview dashboard (3 paneeli):
+    - MAE (kWh) stat paneel
+    - Tegelik vs prognoos aegrida
+    - Prognoosiviga (%) stat paneel
+  - Uus prod DAG solar_analytics_hourly:
+    - Graafik: validate → [ingest_vrm, ingest_meteo] → dbt → forecast → dbt_forecast_marts
+    - pipeline_smoke_test jäi muutmata
+  - Dokumentatsioon: arhitektuur.md andmevoo ja DQ testide sektsioonid uuendatud
+- Järgmised sammud:
+  - Meteo ingest laiendada forecast_days=2 jaoks (homse ilmaprognoos)
+  - Demo video salvestamine
+  - README finaalversioon
