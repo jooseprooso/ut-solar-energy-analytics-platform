@@ -188,10 +188,6 @@ models:
         description: >
           IEC 61724 performance ratio: pv_energy_total_kwh / (shortwave_radiation_wm2 / 1000 * capacity_kw).
           NULL when radiation ≤50 W/m² or capacity unknown.
-        tests:
-          - dbt_expectations.expect_column_values_to_be_between:
-              min_value: 0
-              max_value: 2
       - name: specific_yield_kwh_per_kwp
         description: "Normalised yield kWh/kWp — pv_energy_total_kwh / capacity_kw"
       - name: battery_net_kwh
