@@ -72,6 +72,27 @@ Workflow teeb serveris:
 5. Proxy stack `up -d`
 6. `tailscale serve --bg http://127.0.0.1:8088`
 
+## Forecast DAG-id ja SQL migratsioonid
+
+### SQL migratsioonid (Supabase)
+
+`sql/` failid ei käivitu deploy automaatikaga. Uue migratsiooni (nt `sql/007_gold_fct_pv_forecast_hourly.sql`) järel käivita skript **Supabase SQL Editoris** järjekorras (`001` … `007`).
+
+### Kaks forecast DAG-i
+
+| DAG | Schedule | Ülesanne |
+|-----|----------|----------|
+| `solar_analytics_hourly` | `@hourly` | Live prognoos (`--mode live`) + `mart_forecast_accuracy_daily` refresh |
+| `solar_analytics_backtest_daily` | `@daily` | Walk-forward backtest (`--mode backtest`) + accuracy mart |
+
+Eeldus: `gold.mart_vrm_log_hourly` on värske upstream DAG-ide kaudu (`meteo_ingest`, `dag_vrm_log_ingest`, `dbt_transform`).
+
+**Esimene deploy pärast forecast funktsiooni:**
+
+1. Käivita vajalikud `sql/00N` migratsioonid Supabase'is.
+2. Airflow UI → trigger `solar_analytics_backtest_daily` üks kord (täidab Grafana KPI-d).
+3. `solar_analytics_hourly` jookseb automaatselt (live prognoos).
+
 ## Deploy-järgne valideerimine
 
 1. Compose konfiguratsioon resolve'ub korrektselt:
