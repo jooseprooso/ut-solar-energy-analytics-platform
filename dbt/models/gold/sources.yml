@@ -1,0 +1,24 @@
+version: 2
+
+sources:
+  - name: gold_external
+    description: "Tables in gold schema written by Python jobs (not managed by dbt)"
+    schema: gold
+    tables:
+      - name: fct_pv_forecast_hourly
+        description: "Hourly PV production forecasts written by src/forecast/run_forecast.py"
+        columns:
+          - name: site_id
+            tests:
+              - not_null
+          - name: timestamp_utc
+            tests:
+              - not_null
+          - name: pv_energy_forecast_kwh
+            tests:
+              - not_null
+          - name: forecast_type
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['backtest', 'live']
