@@ -90,3 +90,13 @@ Kontrolli `.env` võtmed:
 - veendu, et JSON fail asub `grafana/dashboards/` kaustas;
 - kontrolli provisioning faili teed;
 - tee `restart grafana`.
+
+### 4) Paneelid No Data, Query tühi
+
+Paneelid on olemas, aga päringud puuduvad või andmeid ei näidata:
+
+- Kontrolli, et `grafana/dashboards/solar_kpi_overview.json` kasutab **`rawSql`** ja **`rawQuery": true`** (mitte `rawCode`) — Grafana 11 PostgreSQL datasource ei käivita `rawCode` välja.
+- Serveris: `grep rawSql grafana/dashboards/solar_kpi_overview.json` (ootus: 3 rida).
+- Pärast JSON muudatust: `docker compose --env-file .env -f grafana/docker-compose.grafana.yml restart grafana` või oota ~30 s (file provisioning `updateIntervalSeconds`).
+- Kui dashboard on varem UI-s käsitsi salvestatud, võib `grafana_data` volume hoida vana koopiat — kustuta dashboard UI-st (sama `uid: solar-kpi-overview`) ja lase provisioning uuesti luua, või suurenda JSON-is `version` ja restart.
+- Kinnita andmed Supabase'is: `SELECT count(*) FROM gold.mart_forecast_accuracy_daily WHERE forecast_type = 'backtest';`

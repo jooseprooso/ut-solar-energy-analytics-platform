@@ -83,7 +83,8 @@
         {
           "editorMode": "code",
           "format": "table",
-          "rawCode": "SELECT avg(abs_error_kwh)::double precision AS mae_kwh FROM gold.mart_forecast_accuracy_daily WHERE forecast_type = 'backtest';",
+          "rawQuery": true,
+          "rawSql": "SELECT avg(abs_error_kwh)::double precision AS mae_kwh FROM gold.mart_forecast_accuracy_daily WHERE forecast_type = 'backtest';",
           "refId": "A",
           "sql": {
             "columns": [
@@ -192,7 +193,8 @@
         {
           "editorMode": "code",
           "format": "time_series",
-          "rawCode": "SELECT date_day AS \"time\", pv_energy_actual_kwh::double precision AS \"Tegelik\", pv_energy_forecast_kwh::double precision AS \"Prognoos\" FROM gold.mart_forecast_accuracy_daily WHERE forecast_type = 'backtest' ORDER BY date_day;",
+          "rawQuery": true,
+          "rawSql": "SELECT date_day::timestamptz AS \"time\", pv_energy_actual_kwh::double precision AS \"Tegelik\", pv_energy_forecast_kwh::double precision AS \"Prognoos\" FROM gold.mart_forecast_accuracy_daily WHERE forecast_type = 'backtest' ORDER BY date_day;",
           "refId": "A",
           "sql": {
             "columns": [
@@ -278,7 +280,8 @@
         {
           "editorMode": "code",
           "format": "table",
-          "rawCode": "SELECT avg(abs(forecast_error_pct))::double precision AS mape FROM gold.mart_forecast_accuracy_daily WHERE forecast_type = 'backtest';",
+          "rawQuery": true,
+          "rawSql": "SELECT avg(abs(forecast_error_pct))::double precision AS mape FROM gold.mart_forecast_accuracy_daily WHERE forecast_type = 'backtest';",
           "refId": "A",
           "sql": {
             "columns": [
@@ -314,13 +317,13 @@
     "list": []
   },
   "time": {
-    "from": "now-30d",
+    "from": "now-180d",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "utc",
   "title": "Solar KPI Overview",
   "uid": "solar-kpi-overview",
-  "version": 1,
+  "version": 2,
   "weekStart": ""
 }
