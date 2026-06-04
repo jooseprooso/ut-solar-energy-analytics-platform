@@ -36,6 +36,8 @@ class TestBuildFeatures:
         df = _make_df(1)
         features = build_features(df)
         assert "shortwave_radiation_wm2" in features.columns
+        assert "shortwave_radiation_sq" in features.columns
+        assert "direct_radiation_sq" in features.columns
         assert "hour_sin" in features.columns
         assert "hour_cos" in features.columns
         assert len(features) == len(df)
@@ -62,6 +64,24 @@ class TestTrainAndPredict:
 
         y_hat = train_and_predict(train_df, pred_df)
         assert all(y_hat >= 0.0)
+
+    def test_nighttime_predictions_are_zero(self):
+        df = _make_df(10)
+        train_df = df[df["date_day"] < df["date_day"].iloc[-24]]
+        pred_df = df[df["date_day"] == df["date_day"].iloc[-1]]
+
+        y_hat = train_and_predict(train_df, pred_df)
+        night_mask = ~pred_df["is_daytime"].astype(bool).values
+        assert all(y_hat[night_mask] == 0.0)
+
+    def test_daytime_predictions_positive(self):
+        df = _make_df(10)
+        train_df = df[df["date_day"] < df["date_day"].iloc[-24]]
+        pred_df = df[df["date_day"] == df["date_day"].iloc[-1]]
+
+        y_hat = train_and_predict(train_df, pred_df)
+        day_mask = pred_df["is_daytime"].astype(bool).values
+        assert any(y_hat[day_mask] > 0.0)
 
     def test_raises_on_insufficient_data(self):
         df = _make_df(1)
