@@ -65,8 +65,8 @@ class TestTrainAndPredict:
 
     def test_raises_on_insufficient_data(self):
         df = _make_df(1)
-        train_df = df[df["is_daytime"] == False]
-        pred_df = df[df["is_daytime"] == True]
+        train_df = df[~df["is_daytime"]]
+        pred_df = df[df["is_daytime"]]
 
         with pytest.raises(ValueError, match="Too few training rows"):
             train_and_predict(train_df, pred_df)
