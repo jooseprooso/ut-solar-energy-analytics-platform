@@ -31,14 +31,14 @@ default_args = {
 
 
 with DAG(
-    dag_id="solar_analytics_hourly",
-    description="Live forecast for next-day PV; refreshes accuracy mart (KPI history from backtest DAG)",
+    dag_id="solar_analytics_backtest_daily",
+    description="Walk-forward backtest + mart_forecast_accuracy_daily for Grafana KPIs",
     start_date=datetime(2026, 1, 1),
-    schedule="@hourly",
+    schedule="@daily",
     catchup=False,
     default_args=default_args,
     max_active_runs=1,
-    tags=["solar", "production", "forecast"],
+    tags=["solar", "production", "forecast", "backtest"],
 ) as dag:
     validate_runtime_config = PythonOperator(
         task_id="validate_runtime_config",
@@ -47,7 +47,7 @@ with DAG(
 
     forecast = BashOperator(
         task_id="forecast",
-        bash_command="cd /opt/airflow/project && python src/forecast/run_forecast.py --mode live",
+        bash_command="cd /opt/airflow/project && python src/forecast/run_forecast.py --mode backtest",
     )
 
     dbt_run_forecast_marts = BashOperator(
