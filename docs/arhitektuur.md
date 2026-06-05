@@ -42,7 +42,7 @@ flowchart LR
 | VRM API | API | Jah, iga 15 min tagant | Põhiandmevoog |
 | Open Meteo | API | Jah, ilmamudel uueneb iga 6h tagant | Kõrvalvoog |
 
-## Stack
+## Tehnoloogiavirn
 
 | Komponent | Tööriist |
 |-----------|---------|
@@ -100,7 +100,7 @@ Airflow UI:
 Connections/Variables bootstrap:
 - `docker compose --env-file .env -f airflow/docker-compose.airflow.yml run --rm airflow-apiserver bash /opt/airflow/project/airflow/scripts/bootstrap_connections.sh`
 
-### Grafana stack (`grafana/docker-compose.grafana.yml`)
+### Grafana tehnoloogiavirn (`grafana/docker-compose.grafana.yml`)
 
 Teenused:
 - `grafana` (näidikulaud + Supabase datasource provisioning)
@@ -114,7 +114,7 @@ Grafana UI:
 - Port on seotud localhostile (`127.0.0.1:3000`).
 - Väline ligipääs käib reverse proxy kaudu URL-il `https://<tailscale-host>/grafana`.
 
-### Reverse proxy stack (`proxy/docker-compose.proxy.yml`)
+### Reverse proxy tehnoloogiavirn (`proxy/docker-compose.proxy.yml`)
 
 Teenused:
 - `reverse-proxy` (Nginx path routing)
