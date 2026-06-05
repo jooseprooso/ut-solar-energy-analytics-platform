@@ -48,6 +48,8 @@ flowchart LR
 |-----------|---------|
 | Server | Hetzner VM 2 vCPU 4 GB RAM 40 GB SSD |
 | Sissevõtt | Airflow, Python |
+| VPN | Tailscale |
+| Reverse Proxy | Nginx |
 | Transformatsioon | SQL, dbt |
 | Andmehoidla | PostgreSQL |
 | Prognoos | Python |
