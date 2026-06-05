@@ -50,6 +50,7 @@ flowchart LR
 | Sissevõtt | Airflow, Python |
 | VPN | Tailscale |
 | Reverse Proxy | Nginx |
+| Koodi kvaliteedi kontroll & tootmiskeskonda paigaldamine | Github Actions |
 | Transformatsioon | SQL, dbt |
 | Andmehoidla | PostgreSQL |
 | Prognoos | Python |
