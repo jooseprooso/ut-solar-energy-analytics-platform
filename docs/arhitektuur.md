@@ -270,18 +270,17 @@ Kaustade eesmärk lühidalt:
 
 **Kokkuvõte:**
 - Automatiseeritud end-to-end andmetoru: VRM + meteo ingest → dbt silver/gold → Python prognoos → Grafana dashboard
-- Ridge regression mudel ennustab järgmise päeva päikeseenergia tootmist tunni grainiga
+- Ridge regressioonimudel ennustab järgmise päeva päikeseenergia tootmist tunni täpsusega
 - 3 KPI-d (MAE, erinevus kWh, erinevus %) arvutatakse `mart_forecast_accuracy_daily` kaudu
 - Walk-forward backtest tagab, et prognoos ei kasuta tuleviku andmeid
 
 **Puudused:**
-- Hindcast kasutab tegelikke ilmaandmeid (mitte meteoprognoosi) — MAE on optimistlik
-- ~35 päeva ajalugu — mudeli täpsus paraneb andmemahu kasvuga
+- Backtest prognoos kasutab tegelikke ilmaandmeid (mitte meteoprognoosi) — MAE ei arvesta ilmaprognoosi viga
 - Live prognoosi MAE eraldi ei hinnata (liiga vähe kogunenud päevi)
 
 **Mis edasi:**
 - Gradient boosting mudel pikema ajalooga
-- Alertid Grafana kaudu kui prognoos ületab lävendi
+- Salvesta jooksev prognoos maha, et võrrelda tegelikuga samal graafikul (hetkel kirjutab üle)
 
 ## Meeskond
 
