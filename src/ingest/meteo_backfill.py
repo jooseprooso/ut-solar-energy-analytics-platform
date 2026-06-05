@@ -5,16 +5,17 @@ import sys
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from orchestration.config import validate_required_env
-from src.ingest.meteo_api_client import HOURLY_VARIABLES, HttpClient
+from src.ingest.meteo_api_client import (
+    HttpClient,
+    build_http_session,
+    fetch_archive_chunk,
+)
 from src.ingest.meteo_db_writer import DbConnection, build_connection, upsert_meteo_rows
 from src.ingest.meteo_transform import parse_hourly_response
-
-ARCHIVE_API_URL = "https://archive-api.open-meteo.com/v1/archive"
 
 REQUIRED_ENV_KEYS = [
     "METEO_LAT",
@@ -28,9 +29,7 @@ REQUIRED_ENV_KEYS = [
 
 DEFAULT_BACKFILL_DAYS = 182
 DEFAULT_CHUNK_DAYS = 30
-DEFAULT_RETRIES = 5
-DEFAULT_BACKOFF_FACTOR = 1.0
-RETRY_STATUS_CODES = (502, 503, 504)
+BACKFILL_RETRIES = 5
 
 
 @dataclass(frozen=True)
@@ -82,26 +81,6 @@ def date_chunks(
     return chunks
 
 
-def fetch_archive_chunk(
-    http_client: HttpClient,
-    latitude: float,
-    longitude: float,
-    start_date: date,
-    end_date: date,
-) -> dict[str, Any]:
-    params = {
-        "latitude": latitude,
-        "longitude": longitude,
-        "start_date": start_date.isoformat(),
-        "end_date": end_date.isoformat(),
-        "hourly": ",".join(HOURLY_VARIABLES),
-        "timezone": "UTC",
-    }
-    response = http_client.get(ARCHIVE_API_URL, params=params)
-    response.raise_for_status()
-    return response.json()
-
-
 def run_backfill(
     config: BackfillConfig, http_client: HttpClient, conn: DbConnection
 ) -> int:
@@ -132,21 +111,7 @@ def run_backfill(
 
 
 def build_http_client() -> HttpClient:
-    import requests
-    from requests.adapters import HTTPAdapter
-    from urllib3.util.retry import Retry
-
-    session = requests.Session()
-    retry = Retry(
-        total=DEFAULT_RETRIES,
-        backoff_factor=DEFAULT_BACKOFF_FACTOR,
-        status_forcelist=RETRY_STATUS_CODES,
-        allowed_methods=["GET"],
-    )
-    adapter = HTTPAdapter(max_retries=retry)
-    session.mount("https://", adapter)
-    session.mount("http://", adapter)
-    return session
+    return build_http_session(retries=BACKFILL_RETRIES)
 
 
 def main() -> int:

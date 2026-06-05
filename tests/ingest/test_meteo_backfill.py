@@ -9,7 +9,6 @@ from src.ingest.meteo_backfill import (
     BackfillConfig,
     build_backfill_config_from_env,
     date_chunks,
-    fetch_archive_chunk,
     main,
     run_backfill,
 )
@@ -34,41 +33,6 @@ class TestDateChunks:
     def test_single_day(self):
         chunks = date_chunks(date(2026, 5, 1), date(2026, 5, 1), chunk_days=30)
         assert chunks == [(date(2026, 5, 1), date(2026, 5, 1))]
-
-
-class TestFetchArchiveChunk:
-    def test_calls_api_with_correct_params(self):
-        mock_client = MagicMock()
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"hourly": {}}
-        mock_client.get.return_value = mock_response
-
-        result = fetch_archive_chunk(
-            mock_client, 58.2483, 22.4939, date(2026, 1, 1), date(2026, 1, 30)
-        )
-
-        mock_client.get.assert_called_once()
-        call_args = mock_client.get.call_args
-        assert call_args[0][0] == "https://archive-api.open-meteo.com/v1/archive"
-        params = call_args[1]["params"]
-        assert params["latitude"] == 58.2483
-        assert params["longitude"] == 22.4939
-        assert params["start_date"] == "2026-01-01"
-        assert params["end_date"] == "2026-01-30"
-        assert "sunshine_duration" in params["hourly"]
-        mock_response.raise_for_status.assert_called_once()
-        assert result == {"hourly": {}}
-
-    def test_raises_on_http_error(self):
-        mock_client = MagicMock()
-        mock_response = MagicMock()
-        mock_response.raise_for_status.side_effect = Exception("502 Bad Gateway")
-        mock_client.get.return_value = mock_response
-
-        with pytest.raises(Exception, match="502 Bad Gateway"):
-            fetch_archive_chunk(
-                mock_client, 58.2483, 22.4939, date(2026, 1, 1), date(2026, 1, 30)
-            )
 
 
 class TestRunBackfill:

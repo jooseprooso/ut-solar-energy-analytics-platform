@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from typing import Any, Protocol
 
 import requests
@@ -9,6 +10,7 @@ from urllib3.util.retry import Retry
 
 
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
+ARCHIVE_API_URL = "https://archive-api.open-meteo.com/v1/archive"
 
 DEFAULT_RETRIES = 3
 DEFAULT_BACKOFF_FACTOR = 1.0
@@ -35,7 +37,7 @@ class MeteoApiConfig:
     forecast_hours: int = 24
 
 
-def _build_session_with_retries(
+def build_http_session(
     retries: int = DEFAULT_RETRIES,
     backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     status_forcelist: tuple[int, ...] = RETRY_STATUS_CODES,
@@ -57,7 +59,7 @@ def fetch_hourly_weather(
     config: MeteoApiConfig,
     http_client: HttpClient | None = None,
 ) -> dict[str, Any]:
-    client = http_client or _build_session_with_retries()
+    client = http_client or build_http_session()
     params = {
         "latitude": config.latitude,
         "longitude": config.longitude,
@@ -67,5 +69,25 @@ def fetch_hourly_weather(
         "forecast_hours": config.forecast_hours,
     }
     response = client.get(OPEN_METEO_URL, params=params)
+    response.raise_for_status()
+    return response.json()
+
+
+def fetch_archive_chunk(
+    http_client: HttpClient,
+    latitude: float,
+    longitude: float,
+    start_date: date,
+    end_date: date,
+) -> dict[str, Any]:
+    params = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "start_date": start_date.isoformat(),
+        "end_date": end_date.isoformat(),
+        "hourly": ",".join(HOURLY_VARIABLES),
+        "timezone": "UTC",
+    }
+    response = http_client.get(ARCHIVE_API_URL, params=params)
     response.raise_for_status()
     return response.json()
