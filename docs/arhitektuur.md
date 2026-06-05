@@ -47,15 +47,15 @@ flowchart LR
 | Komponent | Tööriist |
 |-----------|---------|
 | Server | Hetzner VM 2 vCPU 4 GB RAM 40 GB SSD |
-| Sissevõtt | Airflow, Python |
+| Andmete sissevõtt | Airflow, Python |
 | VPN | Tailscale |
 | Reverse Proxy | Nginx |
 | Koodi kvaliteedi kontroll & tootmiskeskonda paigaldamine | Github Actions |
-| Transformatsioon | SQL, dbt |
+| Andmete transformatsioon | SQL, dbt |
 | Andmehoidla | PostgreSQL |
 | Prognoos | Python |
-| Näidikulaud | Grafana (Hetzner VM, Tailscale ligipääs) |
-| Orkestreerimine | Airflow |
+| Näidikulaud | Grafana |
+| Tööde orkestreerimine | Airflow |
 
 ## Käivitamine
 
