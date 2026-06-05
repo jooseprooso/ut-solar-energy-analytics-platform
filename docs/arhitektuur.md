@@ -35,8 +35,6 @@ flowchart LR
     gha["GitHub Actions (CI/manual kontroll)"] --> ciChecks["Lint ja testid"]
 ```
 
-Täpsem kirjeldus: see dokument
-
 ## Andmestik
 
 | Allikas | Tüüp | Ajas muutuv? | Roll |
