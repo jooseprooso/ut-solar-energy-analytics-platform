@@ -52,7 +52,7 @@ flowchart LR
 | Reverse Proxy | Nginx |
 | Koodi kvaliteedi kontroll & tootmiskeskonda paigaldamine | Github Actions |
 | Andmete transformatsioon | SQL, dbt |
-| Andmehoidla | PostgreSQL |
+| Andmehoidla | Supabase (PostgreSQL) |
 | Prognoos | Python |
 | Näidikulaud | Grafana |
 | Tööde orkestreerimine | Airflow |
